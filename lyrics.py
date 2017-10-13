@@ -553,7 +553,7 @@ def run(artist, title):
 
 def parseargs(args):
     if type(args) is str:
-        recv = [ t.strip() for t in read.split("-") ]
+        recv = [ t.strip() for t in args.split("-") ]
         if len(recv) != 2:
             sys.stderr.write('Wrong format!\n')
             return 1
@@ -574,6 +574,13 @@ def parseargs(args):
         return None
 
     return artist, title
+
+def find_lyrics(args):
+    artist,title = parseargs(args)
+    if artist is None or title is None:
+        return 1
+
+    return run(artist, title)
 
 # Yes I know this is not the most pythonic way to do things, but it helps me
 # organize my code.
