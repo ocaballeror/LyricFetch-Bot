@@ -503,7 +503,6 @@ class Result:
     """Contains the results generated from run_mp, so they can be returned as a
     single variable"""
     def __init__(self, source=None, artist="", title="", lyrics="", runtimes={}):
-
         # The source where the lyrics were found (or None if they weren't)
         self.source = source
 
@@ -556,7 +555,7 @@ def parseargs(args):
         recv = [ t.strip() for t in args.split("-") ]
         if len(recv) != 2:
             sys.stderr.write('Wrong format!\n')
-            return 1
+            return None
 
         artist = recv[0]
         title = recv[1]
@@ -566,6 +565,7 @@ def parseargs(args):
         except ValueError:
             sys.stderr.write('Wrong format!\n')
             return None
+
         artist = ''.join(args[0:split])
         title = ''.join(args[split+1:])
 
@@ -576,9 +576,13 @@ def parseargs(args):
     return artist, title
 
 def find_lyrics(args):
-    artist,title = parseargs(args)
+    res = parseargs(args)
+    if res is None:
+        return None
+
+    artist, title = res
     if artist is None or title is None:
-        return 1
+        return None
 
     return run(artist, title)
 

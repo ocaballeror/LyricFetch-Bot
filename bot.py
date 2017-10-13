@@ -31,9 +31,8 @@ def start(bot, update):
 def find(bot, update):
     res = lyrics.find_lyrics(update.message.text)
     if res is None:
-        msg = 'Sorry, an unexpected error occurred. Please try again'
-
-    if res.source is None or res.lyrics=='':
+        msg = 'Wrong format!'
+    elif res.source is None or res.lyrics=='':
         msg = f'Lyrics for {res.artist.title()} - {res.title.title()} could not be found'
     else:
         msg = f'''FROM: {lyrics.id_source(res.source, True)}
@@ -43,8 +42,8 @@ def find(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text=msg)
 
 def unknown(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text="Sorry, I didn't get"
-            " that")
+    bot.send_message(chat_id=update.message.chat_id, text="Sorry, I didn't
+            understand that command")
 
 updater = Updater("461228377:AAHmL7NmGiRAEwOqsBXxa02ArlxeWugc45Y")
 
