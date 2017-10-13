@@ -22,6 +22,8 @@ Remember I'll always be awake waiting for you to ask me something, so feel free 
 to do so at any time.
 
 Thank you for choosing me!
+
+PS: The source code is available on github: https://github.com/ocaballeror/LyricFetch-Bot
 """
 
 def start(bot, update):
