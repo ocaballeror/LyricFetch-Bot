@@ -44,8 +44,8 @@ def find(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text=msg)
 
 def unknown(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text="Sorry, I didn't
-            understand that command")
+    bot.send_message(chat_id=update.message.chat_id, text="Sorry, I didn't"
+            " understand that command")
 
 updater = Updater("461228377:AAHmL7NmGiRAEwOqsBXxa02ArlxeWugc45Y")
 
