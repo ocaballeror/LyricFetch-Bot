@@ -113,8 +113,7 @@ def metrolyrics(artist, title):
         return ""
 
     text = ""
-    body = body.find_all('p')
-    for verse in body:
+    for verse in body.find_all('p'):
         text += verse.get_text()
         if verse != body[-1]:
             text += '\n\n'
@@ -154,7 +153,6 @@ def azlyrics(artist, title):
     artist = normalize(artist, urlescapeS, "")
     title = title.lower()
     title = normalize(title, urlescapeS, "")
-
 
     url = "https://www.azlyrics.com/lyrics/{}/{}.html".format(artist, title)
     soup = bs(url)
@@ -196,24 +194,20 @@ def metalarchives(artist, title):
     url = "http://www.metal-archives.com/search/ajax-advanced/searching/songs/"
     url += f"?songTitle={title}&bandName={artist}&ExactBandMatch=1"
     soup = bs(url)
-    links = soup.find_all('a')
-    for link in links:
+    song_id = ''
+    for link in soup.find_all('a'):
         song_id = re.search(r'lyricsLink_([0-9]*)', str(link))
         if song_id:
             song_id = song_id.group(1)
-        else:
-            continue
+            break
 
-        url="https://www.metal-archives.com/release/ajax-view-lyrics/id/{}".format(song_id)
-        try:
-            soup = bs(url)
-            text = soup.get_text()
-            if re.search('lyrics not available', text):
-                return ""
-            else:
-                return text.strip()
-        except (HTTPError, URLError):
-            continue
+    url="https://www.metal-archives.com/release/ajax-view-lyrics/id/{}".format(song_id)
+    soup = bs(url)
+    text = soup.get_text()
+    if re.search('lyrics not available', text):
+        return ""
+    else:
+        return text.strip()
 
     return ""
 
