@@ -113,9 +113,10 @@ def metrolyrics(artist, title):
         return ""
 
     text = ""
-    for verse in body.find_all('p'):
-        text += verse.get_text()
-        if verse != body[-1]:
+    verses = body.find_all('p')
+    for verse in verses:
+        text += verse.get_text().strip()
+        if verse != verses[-1]:
             text += '\n\n'
 
     return text.strip()
@@ -195,11 +196,15 @@ def metalarchives(artist, title):
     url += f"?songTitle={title}&bandName={artist}&ExactBandMatch=1"
     soup = bs(url)
     song_id = ''
+    song_id_re = re.compile(r'lyricsLink_([0-9]*)')
     for link in soup.find_all('a'):
-        song_id = re.search(r'lyricsLink_([0-9]*)', str(link))
+        song_id = re.search(song_id_re, str(link))
         if song_id:
             song_id = song_id.group(1)
             break
+
+    if not song_id:
+        return ""
 
     url="https://www.metal-archives.com/release/ajax-view-lyrics/id/{}".format(song_id)
     soup = bs(url)
@@ -208,8 +213,6 @@ def metalarchives(artist, title):
         return ""
     else:
         return text.strip()
-
-    return ""
 
 def lyricswikia(artist, title):
     '''Returns the lyrics found in lyrics.wikia.com for the specified mp3 file or an
@@ -267,8 +270,11 @@ def musixmatch(artist, title):
     url = "https://www.musixmatch.com/lyrics/{}/{}".format(artist, title)
     soup = bs(url)
     text = ""
-    for p in soup.find_all('p', class_='mxm-lyrics__content '):
-        text += p.get_text()
+    contents = soup.find_all('p', class_='mxm-lyrics__content '):
+    for p in contents:
+        text += p.get_text().strip()
+        if p != contents[-1]:
+            text += '\n\n'
 
     return text.strip()
 
@@ -513,7 +519,7 @@ def run(artist, title):
     """Searches for lyrics of a single song and returns an mp_res object with
     the various stats collected in the process. It is intended to be an
     auxiliary function to run, which will invoke it as a parallel process"""
-    logger.info('{artist} - {title}')
+    logger.info(f'{artist} - {title}')
 
     lyrics = ""
     start = 0
