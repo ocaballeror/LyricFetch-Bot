@@ -24,18 +24,14 @@
 # album name just based on the title and artist and include Darklyrics again.
 
 import sys
-import os
 import time
 import re
-import math
-import argparse
-import glob
 import logging
-import urllib.request as urllib
+import urllib.request as request
 
 from urllib.error import *
 from http.client import HTTPException
-from bs4 import NavigableString, Tag, BeautifulSoup
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -56,16 +52,16 @@ logging.getLogger("eyed3.mp3.headers").setLevel(logging.CRITICAL)
 def bs(url, safe=":/"):
     '''Requests the specified url and returns a BeautifulSoup object with its
     contents'''
-    url = urllib.quote(url,safe=safe)
-    logger.debug('URL: '+url)
-    req = urllib.Request(url, headers={"User-Agent": "foobar"})
-    response = urllib.urlopen(req)
+    url = request.quote(url,safe=safe)
+    logger.debug('URL: %s', url)
+    req = request.Request(url, headers={"User-Agent": "foobar"})
+    response = request.urlopen(req)
     return BeautifulSoup(response.read(), 'html.parser')
 
 # Contains the characters usually removed or replaced in URLS
 urlescape = ".¿?%_@,;&\\/()'\"-!¡"
 urlescapeS = ' '+urlescape
-def normalize(string, charsToRemove=None, replacement=''):
+def normalize(string, chars_to_remove=None, replacement=''):
     """Remove accented characters and such.
     The argument charsToRemove is a dictionary that maps a string of chars
     to a single character. Every ocurrence of every character in the first
@@ -84,13 +80,13 @@ def normalize(string, charsToRemove=None, replacement=''):
         'ñ': 'n'
     }))
 
-    if isinstance(charsToRemove, dict):
-        for chars,replace in charsToRemove.items():
+    if isinstance(chars_to_remove, dict):
+        for chars,replace in chars_to_remove.items():
             reg = "["+re.escape(chars)+"]"
             ret = re.sub(reg, replace, ret)
 
-    elif isinstance(charsToRemove, str):
-        reg = '['+re.escape(charsToRemove)+']'
+    elif isinstance(chars_to_remove, str):
+        reg = '['+re.escape(chars_to_remove)+']'
         ret = re.sub(reg, replacement, ret)
 
     return ret
@@ -471,33 +467,37 @@ sources = [
 ]
 
 def id_source(source, full=False):
+    '''Returns the name of a website-scrapping function'''
     if source == azlyrics:
-        return "AZLyrics.com" if full else 'AZL'
+        name = "AZLyrics.com" if full else 'AZL'
     elif source == metrolyrics:
-        return "MetroLyrics.com" if full else 'MET'
+        name = "MetroLyrics.com" if full else 'MET'
     elif source == lyricswikia:
-        return "lyrics.wikia.com" if full else 'WIK'
+        name = "lyrics.wikia.com" if full else 'WIK'
     elif source == darklyrics:
-        return "DarkLyrics.com" if full else 'DAR'
+        name = "DarkLyrics.com" if full else 'DAR'
     elif source == metalarchives:
-        return "Metal-archives.com" if full else 'ARC'
+        name = "Metal-archives.com" if full else 'ARC'
     elif source == genius:
-        return "Genius.com" if full else 'GEN'
+        name = "Genius.com" if full else 'GEN'
     elif source == musixmatch:
-        return "Musixmatch.com" if full else 'XMA'
+        name = "Musixmatch.com" if full else 'XMA'
     elif source == songlyrics:
-        return "SongLyrics.com" if full else 'SON'
+        name = "SongLyrics.com" if full else 'SON'
     elif source == vagalume:
-        return "Vagalume.com.br" if full else 'VAG'
+        name = "Vagalume.com.br" if full else 'VAG'
     elif source == letras:
-        return "Letras.com" if full else 'LET'
+        name = "Letras.com" if full else 'LET'
     elif source == lyricsmode:
-        return "Lyricsmode.com" if full else 'LYM'
+        name = "Lyricsmode.com" if full else 'LYM'
     elif source == lyricscom:
-        return "Lyrics.com" if full else 'LYC'
+        name = "Lyrics.com" if full else 'LYC'
     elif source == musica:
-        return "Musica.com" if full else'MUS'
+        name = "Musica.com" if full else'MUS'
+    else:
+        name = ''
 
+    return name
 
 class Result:
     """Contains the results generated from run_mp, so they can be returned as a
@@ -551,7 +551,7 @@ def run(artist, title):
     return Result(artist=artist, title=title, runtimes=runtimes)
 
 def parseargs(args):
-    if type(args) is str:
+    if isinstance(args, str):
         recv = [ t.strip() for t in args.split("-") ]
         if len(recv) != 2:
             sys.stderr.write('Wrong format!\n')
@@ -559,7 +559,7 @@ def parseargs(args):
 
         artist = recv[0]
         title = recv[1]
-    elif type(args) is list:
+    elif isinstance(args, list):
         try:
             split = args.index('-')
         except ValueError:
@@ -591,13 +591,17 @@ def find_lyrics(args):
 def main():
     try:
         if len(sys.argv) > 1:
-            artist,title = parseargs(sys.argv[1:])
+            ret = parseargs(sys.argv[1:])
         else:
             read = input('Input artist - title: ')
-            artist,title = parseargs(read)
+            ret = parseargs(read)
 
-        if artist is None or title is None:
+        if ret is None:
             return 1
+        else:
+            artist,title = ret
+            if artist is None or title is None:
+                return 1
 
         res = run(artist, title)
         if res.source is None:
