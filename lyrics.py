@@ -190,7 +190,7 @@ def metalarchives(artist, title):
 
     url = "http://www.metal-archives.com/search/ajax-advanced/searching/songs/"
     url += f"?songTitle={title}&bandName={artist}&ExactBandMatch=1"
-    soup = bs(url)
+    soup = bs(url, safe=':/&?')
     song_id = ''
     song_id_re = re.compile(r'lyricsLink_([0-9]*)')
     for link in soup.find_all('a'):
