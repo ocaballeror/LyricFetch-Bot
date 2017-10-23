@@ -42,7 +42,7 @@ def find(bot, update):
         else:
             msg = f'''FROM: {lyrics.id_source(res.source, True)}
 
-    {res.lyrics}'''
+{res.lyrics}'''
 
         bot.send_message(chat_id=update.message.chat_id, text=msg)
     except Exception:
@@ -60,4 +60,5 @@ updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
 updater.dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
 updater.start_polling()
+print('Started')
 updater.idle()
