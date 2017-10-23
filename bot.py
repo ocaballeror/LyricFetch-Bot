@@ -44,7 +44,17 @@ def find(bot, update):
 
 {res.lyrics}'''
 
-        bot.send_message(chat_id=update.message.chat_id, text=msg)
+        last_section = 0
+        chunksize=telegram.constants.MAX_MESSAGE_LENGTH
+        for section in range(chunksize, len(msg), chunksize):
+            print(f'sending chunk {last_section}-{section}({last_section-section}):\
+                    {msg[last_section:section]}')
+            bot.send_message(chat_id=update.message.chat_id,
+                    text=msg[last_section:section])
+            last_section = section
+        if section < len(msg):
+            bot.send_message(chat_id=update.message.chat_id,
+                    text=msg[last_section:len(msg)])
     except Exception:
         msg = f'Lyrics for {res.artist.title()} - {res.title.title()} could not be found'
         bot.send_message(chat_id=update.message.chat_id, text=msg)
