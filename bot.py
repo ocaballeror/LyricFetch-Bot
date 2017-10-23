@@ -1,5 +1,6 @@
 import logging
 import lyrics
+import telegram
 
 from lyrics import Result
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
@@ -55,7 +56,8 @@ def find(bot, update):
         if section < len(msg):
             bot.send_message(chat_id=update.message.chat_id,
                     text=msg[last_section:len(msg)])
-    except Exception:
+    except Exception as e:
+        logging.exception(e)
         msg = f'Lyrics for {res.artist.title()} - {res.title.title()} could not be found'
         bot.send_message(chat_id=update.message.chat_id, text=msg)
 
