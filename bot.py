@@ -48,14 +48,22 @@ def find(bot, update):
         last_section = 0
         chunksize=telegram.constants.MAX_MESSAGE_LENGTH
         for section in range(chunksize, len(msg), chunksize):
-            print(f'sending chunk {last_section}-{section}({last_section-section}):\
-                    {msg[last_section:section]}')
+            section = msg.rfind('\n\n', last_section, section)
+
+            # If we moved so far back that we got to the starting point, ignore
+            # the 'avoid splitting' thing and just cut where you can
+            if section == -1 or section <= last_section:
+                section = last_section+chunksize
+
+            print(f'Section: {last_section}:{section}')
             bot.send_message(chat_id=update.message.chat_id,
                     text=msg[last_section:section])
             last_section = section
+
         if last_section < len(msg):
             bot.send_message(chat_id=update.message.chat_id,
                     text=msg[last_section:len(msg)])
+
     except Exception as e:
         logging.exception(e)
         msg = f'Lyrics for {res.artist.title()} - {res.title.title()} could not be found'
