@@ -53,7 +53,7 @@ def find(bot, update):
             bot.send_message(chat_id=update.message.chat_id,
                     text=msg[last_section:section])
             last_section = section
-        if section < len(msg):
+        if last_section < len(msg):
             bot.send_message(chat_id=update.message.chat_id,
                     text=msg[last_section:len(msg)])
     except Exception as e:
