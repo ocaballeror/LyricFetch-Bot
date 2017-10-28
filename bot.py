@@ -1,8 +1,8 @@
 import logging
-import lyrics
+import lyricfetch.lyrics as lyrics
 import telegram
 
-from lyrics import Result, Song
+from lyricfetch.lyrics import Result, Song
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -61,7 +61,7 @@ def unknown(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text="Sorry, I didn't"
             " understand that command")
 
-updater = Updater("442211587:AAEy6nxPEPXMz9OCob8PB8kthpU-uxm41Z0")
+updater = Updater("461228377:AAHmL7NmGiRAEwOqsBXxa02ArlxeWugc45Y")
 
 updater.dispatcher.add_handler(CommandHandler('start', start))
 updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
