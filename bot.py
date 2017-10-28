@@ -2,30 +2,17 @@ import logging
 import lyrics
 import telegram
 
-from lyrics import Result
+from lyrics import Result, Song
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-intro = """Hi there!
-
-I'm the lyrics bot, I can search the web and find lyrics for you.
-
-Tell me the artist and name of the song you are looking for and I'll be right \
-back with the lyrics. Just note that for now, you have to be really specific \
-and use this format:
-
-    Artist - Title
-
-Otherwise I won't be able to find your song.
-
-Remember I'll always be awake waiting for you to ask me something, so feel free \
-to do so at any time.
-
-Thank you for choosing me!
-
-PS: The source code is available on github: https://github.com/ocaballeror/LyricFetch-Bot
-"""
+HELPFILE = './help.txt'
+try:
+    with open(HELPFILE, 'r') as helpfile:
+        intro = helpfile.read()
+except Exception:
+    intro = ""
 
 def start(bot, update):
     '''Function to be called on /start commmand'''
@@ -34,16 +21,17 @@ def start(bot, update):
 def find(bot, update):
     res = None
     try:
-        res = lyrics.find_lyrics(update.message.text)
+        song = Song.from_string(update.message.text)
+        res = lyrics.get_lyrics(song)
 
         if res is None:
             msg = 'Wrong format!'
-        elif res.source is None or res.lyrics == '':
-            msg = f'Lyrics for {res.artist.title()} - {res.title.title()} could not be found'
+        elif res.source is None or song.lyrics == '':
+            msg = f'Lyrics for {song.artist.title()} - {song.title.title()} could not be found'
         else:
-            msg = f'''FROM: {lyrics.id_source(res.source, True)}
+            msg = f'''FROM: {lyrics.id_source(res.source, True).lower()}
 
-{res.lyrics}'''
+{song.lyrics}'''
 
         last_section = 0
         chunksize=telegram.constants.MAX_MESSAGE_LENGTH
@@ -66,14 +54,14 @@ def find(bot, update):
 
     except Exception as e:
         logging.exception(e)
-        msg = f'Lyrics for {res.artist.title()} - {res.title.title()} could not be found'
+        msg = f'Lyrics for {song.artist.title()} - {song.title.title()} could not be found'
         bot.send_message(chat_id=update.message.chat_id, text=msg)
 
 def unknown(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text="Sorry, I didn't"
             " understand that command")
 
-updater = Updater("461228377:AAHmL7NmGiRAEwOqsBXxa02ArlxeWugc45Y")
+updater = Updater("442211587:AAEy6nxPEPXMz9OCob8PB8kthpU-uxm41Z0")
 
 updater.dispatcher.add_handler(CommandHandler('start', start))
 updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
