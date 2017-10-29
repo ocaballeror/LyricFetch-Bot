@@ -8,11 +8,15 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 HELPFILE = './help.txt'
+TOKENFILE = './token.txt'
+
+intro = ""
 try:
-    with open(HELPFILE, 'r') as helpfile:
-        intro = helpfile.read()
-except Exception:
-    intro = ""
+    helpfile = open(HELPFILE, 'r')
+    intro = helpfile.read()
+    helpfile.close()
+except Exception as e:
+    logging.exception(e)
 
 def start(bot, update):
     '''Function to be called on /start commmand'''
@@ -61,12 +65,20 @@ def unknown(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text="Sorry, I didn't"
             " understand that command")
 
-updater = Updater("461228377:AAHmL7NmGiRAEwOqsBXxa02ArlxeWugc45Y")
+token = ''
+try:
+    tokenfile = open(TOKENFILE, 'r')
+    token = tokenfile.read()
+    tokenfile.close()
+except Exception:
+    logger.exception(e)
+    exit(1)
 
+updater = Updater(token)
 updater.dispatcher.add_handler(CommandHandler('start', start))
 updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
 updater.dispatcher.add_handler(MessageHandler(Filters.command, unknown))
-
 updater.start_polling()
+
 print('Started')
 updater.idle()

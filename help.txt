@@ -1,0 +1,12 @@
+Hi there!
+
+I'm the lyrics bot, I can search the web and find lyrics for you.
+
+Tell me the artist and name of the song you are looking for and I'll be right back with the lyrics. Just note that for now, you have to be really specific and use this format:
+    Artist - Title
+
+Otherwise I won't be able to find your song.
+
+Remember I'll always be awake waiting for you to ask me something, so feel free to do so at any time.
+
+Thank you for choosing me!
