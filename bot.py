@@ -74,6 +74,8 @@ except Exception:
     logger.exception(e)
     exit(1)
 
+if token[-1] == '\n':
+    token = token[0:-1]
 updater = Updater(token)
 updater.dispatcher.add_handler(CommandHandler('start', start))
 updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
