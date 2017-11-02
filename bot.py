@@ -24,9 +24,11 @@ def start(bot, update):
 
 def find(bot, update):
     res = None
+    msg = ''
     try:
         song = Song.from_string(update.message.text)
-        res = lyrics.get_lyrics(song)
+        if song:
+            res = lyrics.get_lyrics(song)
 
         if res is None:
             msg = 'Wrong format!'
@@ -58,7 +60,9 @@ def find(bot, update):
 
     except Exception as e:
         logging.exception(e)
-        msg = f'Lyrics for {song.artist.title()} - {song.title.title()} could not be found'
+        if not msg:
+            msg = 'Unknown error'
+
         bot.send_message(chat_id=update.message.chat_id, text=msg)
 
 def unknown(bot, update):
