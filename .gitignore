@@ -4,4 +4,4 @@ __pycache__
 *.pyc
 debuglog
 errlog
-token.txt
+config.json

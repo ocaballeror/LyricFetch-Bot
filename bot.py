@@ -10,7 +10,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 HELPFILE = './help.txt'
-TOKENFILE = './token.txt'
+CONFFILE = './config.json'
 
 intro = ""
 try:
@@ -92,7 +92,7 @@ def parse_config():
     """Returns a dictionary with all the necessary data from the configuration
     file"""
     try:
-        with open('config.json', 'r') as config:
+        with open(CONFFILE, 'r') as config:
             data = json.load(config)
             required_keys = ['token', 'dbuser', 'dbname', 'dbpassword']
             for key in required_keys:
