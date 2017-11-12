@@ -1,7 +1,9 @@
 import logging
 import lyricfetch.lyrics as lyrics
 import telegram
+import json
 
+from db import DB
 from lyricfetch.lyrics import Result, Song
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
@@ -86,22 +88,44 @@ def unknown(bot, update):
     send_message("Sorry, I didn't understand that command", bot,
             update.message.chat_id)
 
-token = ''
-try:
-    tokenfile = open(TOKENFILE, 'r')
-    token = tokenfile.read()
-    tokenfile.close()
-except Exception:
-    logger.exception(e)
+def parse_config():
+    """Returns a dictionary with all the necessary data from the configuration
+    file"""
+    try:
+        with open('config.json', 'r') as config:
+            data = json.load(config)
+            required_keys = ['token', 'dbuser', 'dbname', 'dbpassword']
+            for key in required_keys:
+                if key not in data:
+                    logger.critical(f"Key '{key}' not found in the configuration"
+                            "file. Cannot continue")
+                    return None
+
+            # Set the database host to localhost if it's not set
+            if 'dbhost' not in data:
+                data['dbhost'] = 'localhost'
+
+            return data
+    except IOError:
+        logger.critical('Could not read the configuration file '+CONFFILE)
+        return None
+
+if __name__ == '__main__':
+    config = parse_config()
+    if not config:
     exit(1)
 
-if token[-1] == '\n':
-    token = token[0:-1]
-updater = Updater(token)
-updater.dispatcher.add_handler(CommandHandler('start', start))
-updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
-updater.dispatcher.add_handler(MessageHandler(Filters.command, unknown))
-updater.start_polling()
+    updater = Updater(config['token'])
+    updater.dispatcher.add_handler(CommandHandler('start', start))
+    updater.dispatcher.add_handler(CommandHandler('other', other))
+    updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
+    updater.dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
-print('Started')
-updater.idle()
+    db = DB(config['dbname'], config['dbuser'], config['dbpassword'],
+            config['dbhost'])
+    updater.start_polling()
+
+    print('Started')
+    updater.idle()
+    print('Closing')
+    db.close()
