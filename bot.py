@@ -24,6 +24,18 @@ def start(bot, update):
     '''Function to be called on /start commmand'''
     send_message(intro, bot, update.message.chat_id)
 
+def other(bot, update):
+    last_res = db.get_last_res(update.message.chat_id)
+    if last_res:
+        song = Song.from_info(artist=last_res[0], title=last_res[1])
+        result = Result(song, last_res[2])
+        sources = lyrics.exclude_sources(last_res[2], True)
+        msg, valid = get_lyrics(song, update.message.chat_id, sources)
+    else:
+        msg = "You haven't searched for anything yet"
+
+    send_message(msg, bot, update.message.chat_id)
+
 def get_lyrics(song, chat_id, sources=None):
     """Get lyrics for a song. The 'song' parameter can be either an unparsed
     string directly from the user or a full Song object"""
@@ -47,6 +59,7 @@ def get_lyrics(song, chat_id, sources=None):
         else:
             msg = 'FROM: {}\n\n{}'.format(lyrics.id_source(res.source, True).lower(), song.lyrics)
             valid = True
+            db.log_result(chat_id, res)
     except Exception as e:
         print(e)
         msg = 'Unknown error'
@@ -113,7 +126,7 @@ def parse_config():
 if __name__ == '__main__':
     config = parse_config()
     if not config:
-    exit(1)
+        exit(1)
 
     updater = Updater(config['token'])
     updater.dispatcher.add_handler(CommandHandler('start', start))
