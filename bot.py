@@ -20,25 +20,43 @@ except Exception as e:
 
 def start(bot, update):
     '''Function to be called on /start commmand'''
-    bot.send_message(chat_id=update.message.chat_id, text=intro)
+    send_message(intro, bot, update.message.chat_id)
 
-def find(bot, update):
-    res = None
+def get_lyrics(song, chat_id, sources=None):
+    """Get lyrics for a song. The 'song' parameter can be either an unparsed
+    string directly from the user or a full Song object"""
     msg = ''
+    valid = False
     try:
-        song = Song.from_string(update.message.text)
+        res = None
+        if type(song) is str:
+            song = Song.from_string(song)
+
         if song:
-            res = lyrics.get_lyrics(song)
+            if sources is None:
+                res = lyrics.get_lyrics(song)
+            else:
+                res = lyrics.get_lyrics(song, sources)
 
         if res is None:
             msg = 'Wrong format!'
         elif res.source is None or song.lyrics == '':
             msg = f'Lyrics for {song.artist.title()} - {song.title.title()} could not be found'
         else:
-            msg = f'''FROM: {lyrics.id_source(res.source, True).lower()}
+            msg = 'FROM: {}\n\n{}'.format(lyrics.id_source(res.source, True).lower(), song.lyrics)
+            valid = True
+    except Exception as e:
+        print(e)
+        msg = 'Unknown error'
 
-{song.lyrics}'''
+    return msg, valid
 
+def find(bot, update):
+    lyrics, _ = get_lyrics(update.message.text, update.message.chat_id)
+    send_message(lyrics, bot, update.message.chat_id)
+
+def send_message(msg, bot, chat_id):
+    try:
         last_section = 0
         chunksize=telegram.constants.MAX_MESSAGE_LENGTH
         for section in range(chunksize, len(msg), chunksize):
@@ -49,13 +67,12 @@ def find(bot, update):
             if section == -1 or section <= last_section:
                 section = last_section+chunksize
 
-            print(f'Section: {last_section}:{section}')
-            bot.send_message(chat_id=update.message.chat_id,
+            bot.send_message(chat_id=chat_id,
                     text=msg[last_section:section])
             last_section = section
 
         if last_section < len(msg):
-            bot.send_message(chat_id=update.message.chat_id,
+            bot.send_message(chat_id=chat_id,
                     text=msg[last_section:len(msg)])
 
     except Exception as e:
@@ -63,11 +80,11 @@ def find(bot, update):
         if not msg:
             msg = 'Unknown error'
 
-        bot.send_message(chat_id=update.message.chat_id, text=msg)
+        bot.send_message(chat_id=chat_id, text=msg)
 
 def unknown(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text="Sorry, I didn't"
-            " understand that command")
+    send_message("Sorry, I didn't understand that command", bot,
+            update.message.chat_id)
 
 token = ''
 try:
