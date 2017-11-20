@@ -1,4 +1,5 @@
 import psycopg2 as pg
+import re
 import sys
 from lyricfetch.lyrics import *
 
@@ -24,31 +25,36 @@ class DB:
             raise e
 
     def log_result(self, chat_id, result):
+        title = self.sanitize(result.song.title)
+        artist = self.sanitize(result.song.artist)
         cur = self.connection.cursor()
         cur.execute(f"""SELECT artist,title,source FROM log WHERE
-                chat_id='{chat_id}' and artist='{result.song.artist}'
-                and title='{result.song.title}';""")
+                chat_id='{chat_id}' and artist='{artist}'
+                and title='{title}';""")
         res = cur.fetchone()
 
         if res:
             logger.debug('Updating')
             cur.execute(f"""UPDATE log SET
                     source='{result.source.__name__}', date=extract(epoch from now())
-                    WHERE chat_id='{chat_id}' and artist='{result.song.artist}'
-                    and title='{result.song.title}';""")
+                    WHERE chat_id='{chat_id}' and artist='{artist}'
+                    and title='{title}';""")
         else:
             logger.debug('Inserting')
             cur.execute(f"""INSERT INTO log (chat_id,source,artist,title,date)
                     values ('{chat_id}', '{result.source.__name__}',
-                    '{result.song.artist}', '{result.song.title}',
+                    '{artist}', '{title}',
                     extract(epoch from now()));""")
 
         self.connection.commit()
 
     def get_result(self, song):
+        title = self.sanitize(song.title)
+        artist = self.sanitize(song.artist)
+
         cur = self.connection.cursor()
         cur.execute(f"""SELECT source FROM log WHERE
-                artist='{song.artist}' and title='{song.title}';""")
+                artist='{artist}' and title='{title}';""")
         res = cur.fetchone()
         if res:
             return res[0]
@@ -64,6 +70,12 @@ class DB:
         res = cur.fetchone()
         print(res)
         return res
+
+    @staticmethod
+    def sanitize(string):
+        newstr = re.sub("'", "''", string)
+
+        return newstr
 
     def close(self):
         if self.connection:
