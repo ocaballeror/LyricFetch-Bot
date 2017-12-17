@@ -110,7 +110,7 @@ def parse_config():
             required_keys = ['token', 'dbuser', 'dbname', 'dbpassword']
             for key in required_keys:
                 if key not in data:
-                    logger.critical(f"Key '{key}' not found in the configuration"
+                    logging.critical(f"Key '{key}' not found in the configuration"
                             "file. Cannot continue")
                     return None
 
@@ -120,7 +120,7 @@ def parse_config():
 
             return data
     except IOError:
-        logger.critical('Could not read the configuration file '+CONFFILE)
+        logging.critical('Could not read the configuration file '+CONFFILE)
         return None
 
 if __name__ == '__main__':
