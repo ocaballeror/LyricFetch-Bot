@@ -4,7 +4,7 @@ import lyricfetch.lyrics as lyrics
 import telegram
 
 from db import DB as Database
-from lyricfetch.lyrics import Result, Song
+from lyricfetch.lyrics import Song
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -142,8 +142,12 @@ def main():
     updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
     updater.dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
-    DB = Database(config['dbname'], config['dbuser'], config['dbpassword'],
-            config['dbhost'])
+    try:
+        DB = Database(config['dbname'], config['dbuser'], config['dbpassword'],
+                config['dbhost'])
+    except Exception as e:
+        print(e)
+        return 2
     updater.start_polling()
 
     print('Started')
