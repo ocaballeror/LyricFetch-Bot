@@ -3,8 +3,10 @@ import re
 from lyricfetch.lyrics import *
 
 class DB:
-    def __init__(self, dbname, dbuser, dbpassword, dbhost):
+    def __init__(self):
         self.connection = None
+
+    def config(dbname, dbuser, dbpassword, dbhost):
         self.connection = pg.connect(database=dbname, user=dbuser,
                 password=dbpassword, host=dbhost)
         cur = self.connection.cursor()

@@ -13,7 +13,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 HELPFILE = './help.txt'
 CONFFILE = './config.json'
 
-DB = None
+DB = Database()
 
 def start(bot, update):
     '''Function to be called on /start commmand'''
@@ -130,8 +130,6 @@ def parse_config():
         return None
 
 def main():
-    global DB
-
     config = parse_config()
     if not config:
         return 1
@@ -143,7 +141,7 @@ def main():
     updater.dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
     try:
-        DB = Database(config['dbname'], config['dbuser'], config['dbpassword'],
+        DB.config(config['dbname'], config['dbuser'], config['dbpassword'],
                 config['dbhost'])
     except Exception as e:
         print(e)
