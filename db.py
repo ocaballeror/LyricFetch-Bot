@@ -1,14 +1,26 @@
-import psycopg2 as pg
+"""
+Database management and utilities
+"""
 import re
-from lyricfetch.lyrics import *
+import psycopg2 as pg
+
+from lyricfetch.lyrics import logger
+
 
 class DB:
+    """
+    Main database class. Stores an active connection and contains a series of
+    utilities to insert/query data from the database.
+    """
     def __init__(self):
         self.connection = None
 
-    def config(dbname, dbuser, dbpassword, dbhost):
+    def config(self, dbname, dbuser, dbpassword, dbhost):
+        """
+        Initial database configuration.
+        """
         self.connection = pg.connect(database=dbname, user=dbuser,
-                password=dbpassword, host=dbhost)
+                                     password=dbpassword, host=dbhost)
         cur = self.connection.cursor()
         cur.execute('''\
             CREATE TABLE IF NOT EXISTS log(
@@ -23,6 +35,9 @@ class DB:
         self.connection.commit()
 
     def log_result(self, chat_id, result):
+        """
+        Insert a search result into the database.
+        """
         title = self.sanitize(result.song.title)
         artist = self.sanitize(result.song.artist)
         cur = self.connection.cursor()
@@ -34,9 +49,9 @@ class DB:
         if res:
             logger.debug('Updating')
             cur.execute(f"""UPDATE log SET
-                    source='{result.source.__name__}', date=extract(epoch from now())
-                    WHERE chat_id='{chat_id}' and artist='{artist}'
-                    and title='{title}';""")
+                    source='{result.source.__name__}', date=extract(epoch from
+                    now()) WHERE chat_id='{chat_id}' and artist='{artist}' and
+                    title='{title}';""")
         else:
             logger.debug('Inserting')
             cur.execute(f"""INSERT INTO log (chat_id,source,artist,title,date)
@@ -47,6 +62,9 @@ class DB:
         self.connection.commit()
 
     def get_result(self, song):
+        """
+        Return the last search result for a specific song from the database.
+        """
         title = self.sanitize(song.title)
         artist = self.sanitize(song.artist)
 
@@ -56,11 +74,12 @@ class DB:
         res = cur.fetchone()
         if res:
             return res[0]
-        else:
-            return None
+        return None
 
     def get_last_res(self, chat_id):
-        """Return the last logged result of a specific chat"""
+        """
+        Return the last logged result of a specific chat.
+        """
         cur = self.connection.cursor()
         cur.execute(f"""SELECT artist,title,source FROM log WHERE
                 chat_id='{chat_id}' AND date=(SELECT MAX(date) FROM log WHERE
@@ -71,11 +90,20 @@ class DB:
 
     @staticmethod
     def sanitize(string):
+        """
+        Remove special characters from a string to make it suitable for SQL
+        queries.
+        """
+        if not type(string, str):
+            string = str(string)
         newstr = re.sub("'", "''", string)
 
         return newstr
 
     def close(self):
+        """
+        Close the database connection.
+        """
         if self.connection:
             self.connection.commit()
             self.connection.close()

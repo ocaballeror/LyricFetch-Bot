@@ -1,34 +1,43 @@
+"""
+Main telegram bot module.
+"""
 import logging
 import json
-import lyricfetch.lyrics as lyrics
 import telegram
-
-from db import DB as Database
-from lyricfetch.lyrics import Song
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
+import lyricfetch.lyrics as lyrics
+from lyricfetch.lyrics import Song
+from db import DB as Database
+
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO)
+                    level=logging.INFO)
 
 HELPFILE = './help.txt'
 CONFFILE = './config.json'
 
 DB = Database()
 
+
 def start(bot, update):
-    '''Function to be called on /start commmand'''
+    """
+    Function to be called on /start commmand.
+    """
     intro = ""
     try:
         helpfile = open(HELPFILE, 'r')
         intro = helpfile.read()
         helpfile.close()
-    except Exception as e:
-        logging.exception(e)
+    except IOError as error:
+        logging.exception(error)
 
     send_message(intro, bot, update.message.chat_id)
 
+
 def other(bot, update):
-    """Use a different source to find lyrics for the last searched song"""
+    """
+    Use a different source to find lyrics for the last searched song.
+    """
     last_res = DB.get_last_res(update.message.chat_id)
     if last_res:
         song = Song.from_info(artist=last_res[0], title=last_res[1])
@@ -39,9 +48,12 @@ def other(bot, update):
 
     send_message(msg, bot, update.message.chat_id)
 
+
 def get_lyrics(song, chat_id, sources=None):
-    """Get lyrics for a song. The 'song' parameter can be either an unparsed
-    string directly from the user or a full Song object"""
+    """
+    Get lyrics for a song. The 'song' parameter can be either an unparsed
+    string directly from the user or a full Song object.
+    """
     msg = ''
     valid = False
     try:
@@ -58,24 +70,33 @@ def get_lyrics(song, chat_id, sources=None):
         if res is None:
             msg = 'Wrong format!'
         elif res.source is None or song.lyrics == '':
-            msg = f'Lyrics for {song.artist.title()} - {song.title.title()} could not be found'
+            msg = f'Lyrics for {song.artist.title()} - {song.title.title()} '\
+                   'could not be found'
         else:
-            msg = 'FROM: {}\n\n{}'.format(lyrics.id_source(res.source, True).lower(), song.lyrics)
+            msg = 'FROM: %s\n\n%s' %\
+                    (lyrics.id_source(res.source, True).lower(),
+                     song.lyrics)
             valid = True
             DB.log_result(chat_id, res)
-    except Exception as e:
-        logging.exception(e)
+    except Exception as error:
+        logging.exception(error)
         msg = 'Unknown error'
 
     return msg, valid
 
+
 def find(bot, update):
-    """Find lyrics for a song"""
+    """
+    Find lyrics for a song.
+    """
     lyrics_str, _ = get_lyrics(update.message.text, update.message.chat_id)
     send_message(lyrics_str, bot, update.message.chat_id)
 
+
 def send_message(msg, bot, chat_id):
-    """Splits a string into MAX_LENGTH chunks and sends them as messages"""
+    """
+    Splits a string into MAX_LENGTH chunks and sends them as messages.
+    """
     try:
         last_section = 0
         chunksize = telegram.constants.MAX_MESSAGE_LENGTH
@@ -88,36 +109,42 @@ def send_message(msg, bot, chat_id):
                 section = last_section+chunksize
 
             bot.send_message(chat_id=chat_id,
-                    text=msg[last_section:section])
+                             text=msg[last_section:section])
             last_section = section
 
         if last_section < len(msg):
             bot.send_message(chat_id=chat_id,
-                    text=msg[last_section:len(msg)])
+                             text=msg[last_section:len(msg)])
 
-    except Exception as e:
-        logging.exception(e)
+    except telegram.TelegramError as error:
+        logging.exception(error)
         if not msg:
             msg = 'Unknown error'
 
         bot.send_message(chat_id=chat_id, text=msg)
 
+
 def unknown(bot, update):
-    """Fallback function for commands that don't match any of the known ones"""
+    """
+    Fallback function for commands that don't match any of the known ones.
+    """
     send_message("Sorry, I didn't understand that command", bot,
-            update.message.chat_id)
+                 update.message.chat_id)
+
 
 def parse_config():
-    """Returns a dictionary with all the necessary data from the configuration
-    file"""
+    """
+    Returns a dictionary with all the necessary data from the configuration
+    file.
+    """
     try:
         with open(CONFFILE, 'r') as conffile:
             data = json.load(conffile)
             required_keys = ['token', 'dbuser', 'dbname', 'dbpassword']
             for key in required_keys:
                 if key not in data:
-                    logging.critical(f"Key '{key}' not found in the configuration"
-                            "file. Cannot continue")
+                    logging.critical(f"Key '{key}' not found in the"
+                                     "configuration file. Cannot continue")
                     return None
 
             # Set the database host to localhost if it's not set
@@ -128,6 +155,7 @@ def parse_config():
     except IOError:
         logging.critical('Could not read the configuration file %s', CONFFILE)
         return None
+
 
 def main():
     config = parse_config()
@@ -142,9 +170,9 @@ def main():
 
     try:
         DB.config(config['dbname'], config['dbuser'], config['dbpassword'],
-                config['dbhost'])
-    except Exception as e:
-        print(e)
+                  config['dbhost'])
+    except Exception as error:
+        print(error)
         return 2
     updater.start_polling()
 
@@ -154,6 +182,7 @@ def main():
     DB.close()
 
     return 0
+
 
 if __name__ == '__main__':
     exit(main())
