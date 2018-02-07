@@ -38,26 +38,25 @@ class DB:
         """
         Insert a search result into the database.
         """
+        chat_id = self.sanitize(chat_id)
         title = self.sanitize(result.song.title)
         artist = self.sanitize(result.song.artist)
         cur = self.connection.cursor()
-        cur.execute(f"""SELECT artist,title,source FROM log WHERE
-                chat_id='{chat_id}' and artist='{artist}'
-                and title='{title}';""")
+        cur.execute("SELECT artist,title,source FROM log WHERE "
+                    "chat_id=%s AND artist=%s AND title=%s",
+                    [chat_id, artist, title])
         res = cur.fetchone()
 
         if res:
             logger.debug('Updating')
-            cur.execute(f"""UPDATE log SET
-                    source='{result.source.__name__}', date=extract(epoch from
-                    now()) WHERE chat_id='{chat_id}' and artist='{artist}' and
-                    title='{title}';""")
+            cur.execute("UPDATE log SET source=%s, date=extract(epoch from "
+                        "now()) WHERE chat_id=%s AND artist=%s AND title=%s",
+                        [result.source.__name__, chat_id, artist, title])
         else:
             logger.debug('Inserting')
-            cur.execute(f"""INSERT INTO log (chat_id,source,artist,title,date)
-                    values ('{chat_id}', '{result.source.__name__}',
-                    '{artist}', '{title}',
-                    extract(epoch from now()));""")
+            cur.execute("INSERT INTO log (chat_id,source,artist,title,date) "
+                        "VALUES (%s, %s, %s, %s, EXTRACT(EPOCH FROM NOW()))",
+                        [chat_id, result.source.__name__, artist, title])
 
         self.connection.commit()
 
@@ -69,8 +68,8 @@ class DB:
         artist = self.sanitize(song.artist)
 
         cur = self.connection.cursor()
-        cur.execute(f"""SELECT source FROM log WHERE
-                artist='{artist}' and title='{title}';""")
+        cur.execute("SELECT source FROM log WHERE artist=%s AND title=%s",
+                    [artist, title])
         res = cur.fetchone()
         if res:
             return res[0]
@@ -80,10 +79,12 @@ class DB:
         """
         Return the last logged result of a specific chat.
         """
+        chat_id = self.sanitize(chat_id)
+
         cur = self.connection.cursor()
-        cur.execute(f"""SELECT artist,title,source FROM log WHERE
-                chat_id='{chat_id}' AND date=(SELECT MAX(date) FROM log WHERE
-                chat_id='{chat_id}');""")
+        cur.execute("SELECT artist,title,source FROM log WHERE chat_id=%s AND "
+                    "date=(SELECT MAX(date) FROM log WHERE chat_id=%s)",
+                    [chat_id, chat_id])
         res = cur.fetchone()
         print(res)
         return res
@@ -94,7 +95,7 @@ class DB:
         Remove special characters from a string to make it suitable for SQL
         queries.
         """
-        if not type(string, str):
+        if not isinstance(string, str):
             string = str(string)
         newstr = re.sub("'", "''", string)
 
