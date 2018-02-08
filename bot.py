@@ -3,6 +3,7 @@ Main telegram bot module.
 """
 import logging
 import json
+import psycopg2 as pg
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
@@ -28,7 +29,7 @@ def start(bot, update):
         helpfile = open(HELPFILE, 'r')
         intro = helpfile.read()
         helpfile.close()
-    except IOError as error:
+    except Exception as error:
         logging.exception(error)
 
     send_message(intro, bot, update.message.chat_id)
@@ -38,13 +39,17 @@ def other(bot, update):
     """
     Use a different source to find lyrics for the last searched song.
     """
-    last_res = DB.get_last_res(update.message.chat_id)
-    if last_res:
-        song = Song.from_info(artist=last_res[0], title=last_res[1])
-        sources = lyrics.exclude_sources(last_res[2], True)
-        msg, _ = get_lyrics(song, update.message.chat_id, sources)
-    else:
-        msg = "You haven't searched for anything yet"
+    try:
+        last_res = DB.get_last_res(update.message.chat_id)
+        if last_res:
+            song = Song.from_info(artist=last_res[0], title=last_res[1])
+            sources = lyrics.exclude_sources(last_res[2], True)
+            msg, _ = get_lyrics(song, update.message.chat_id, sources)
+        else:
+            msg = "You haven't searched for anything yet"
+    except pg.Error:
+        msg = "There was an error while looking through the conversation's "\
+              "history. This command is unavailable for now."
 
     send_message(msg, bot, update.message.chat_id)
 
@@ -77,7 +82,10 @@ def get_lyrics(song, chat_id, sources=None):
                     (lyrics.id_source(res.source, True).lower(),
                      song.lyrics)
             valid = True
-            DB.log_result(chat_id, res)
+            try:
+                DB.log_result(chat_id, res)
+            except pg.Error as err:
+                pass
     except Exception as error:
         logging.exception(error)
         msg = 'Unknown error'
@@ -172,8 +180,11 @@ def main():
         DB.config(config['dbname'], config['dbuser'], config['dbpassword'],
                   config['dbhost'])
     except Exception as error:
+        print(type(error))
         print(error)
         return 2
+
+    updater.bot.logger.setLevel(logging.CRITICAL)
     updater.start_polling()
 
     print('Started')
