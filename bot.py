@@ -8,6 +8,7 @@ import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import lyricfetch as lyrics
 from lyricfetch import Song
+from lyricfetch import get_lastfm
 
 from db import DB as Database
 
@@ -33,6 +34,46 @@ def start(bot, update):
         logging.exception(error)
 
     send_message(intro, bot, update.message.chat_id)
+
+
+def _get_next_song(chat_id):
+    """
+    Get lyrics for the next song in the album.
+    """
+    msg = 'OOPS'
+    try:
+        last_res = DB.get_last_res(chat_id)
+        if not last_res:
+            return "You haven't searched for anything yet"
+        song = Song.from_info(artist=last_res[0], title=last_res[1])
+        song.fetch_album_name()
+        if not song.album:
+            return 'Could not find the album this song belongs to'
+        tracks = get_lastfm('album.getInfo', artist=song.artist,
+                            album=song.album)
+        tracks = list(t['name'] for t in tracks['album']['tracks']['track'])
+        tracks = list(map(str.lower, tracks))
+        title = song.title.lower()
+        if title not in tracks:
+            return 'Could not find the album this song belongs to'
+        if title == tracks[-1]:
+            return 'That was the last song on the album'
+        new_title = tracks[tracks.index(title) + 1]
+        new_song = Song.from_info(artist=song.artist, title=new_title,
+                                  album=song.album)
+        msg, _ = get_lyrics(new_song, chat_id)
+    except pg.Error:
+        msg = "There was an error while looking through the conversation's "\
+               "history. This command is unavailable for now."
+    return msg
+
+
+def next_song(bot, update):
+    """
+    Get lyrics for the next song in the album.
+    """
+    msg = _get_next_song(update.message.chat_id)
+    send_message(msg, bot, update.message.chat_id)
 
 
 def other(bot, update):
@@ -173,6 +214,7 @@ def main():
     updater = Updater(config['token'])
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CommandHandler('other', other))
+    updater.dispatcher.add_handler(CommandHandler('next', next_song))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
     updater.dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
