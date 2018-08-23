@@ -9,6 +9,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import lyricfetch as lyrics
 from lyricfetch import Song
 from lyricfetch import get_lastfm
+from lyricfetch import id_source
 
 from db import DB as Database
 
@@ -119,14 +120,19 @@ def get_lyrics(song, chat_id, sources=None):
             msg = f'Lyrics for {song.artist.title()} - {song.title.title()} '\
                    'could not be found'
         else:
-            msg = 'FROM: %s\n\n%s' %\
-                    (lyrics.id_source(res.source, True).lower(),
-                     song.lyrics)
+            msg = '''\
+FROM: {source}
+*{artist} - {title}*
+
+{lyrics}'''
+            msg = msg.format(source=id_source(res.source, True).lower(),
+                             artist=song.artist.title(),
+                             title=song.title.title(), lyrics=song.lyrics)
             valid = True
             try:
                 DB.log_result(chat_id, res)
             except pg.Error as err:
-                pass
+                logging.exception(err)
     except Exception as error:
         logging.exception(error)
         msg = 'Unknown error'
@@ -158,19 +164,22 @@ def send_message(msg, bot, chat_id):
                 section = last_section+chunksize
 
             bot.send_message(chat_id=chat_id,
-                             text=msg[last_section:section])
+                             text=msg[last_section:section],
+                             parse_mode='Markdown')
             last_section = section
 
         if last_section < len(msg):
             bot.send_message(chat_id=chat_id,
-                             text=msg[last_section:len(msg)])
+                             text=msg[last_section:len(msg)],
+                             parse_mode='Markdown')
 
     except telegram.TelegramError as error:
         logging.exception(error)
         if not msg:
             msg = 'Unknown error'
 
-        bot.send_message(chat_id=chat_id, text=msg)
+        bot.send_message(chat_id=chat_id, text=msg,
+                         parse_mode='Markdown')
 
 
 def unknown(bot, update):
