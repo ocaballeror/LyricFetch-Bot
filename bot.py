@@ -6,9 +6,9 @@ import json
 import psycopg2 as pg
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import lyricfetch as lyrics
+from lyricfetch import Song
 
-import lyricfetch.lyrics as lyrics
-from lyricfetch.lyrics import Song
 from db import DB as Database
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
