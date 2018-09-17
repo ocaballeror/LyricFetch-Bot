@@ -23,10 +23,10 @@ class DB:
         Initial database configuration.
         """
         self._dbname, self._dbuser, self._dbpw, self._dbhost =\
-                dbname, dbuser, dbpassword, dbhost
+            dbname, dbuser, dbpassword, dbhost
         self._connection = pg.connect(database=dbname, user=dbuser,
                                       password=dbpassword, host=dbhost)
-        self._execute('''\
+        self._execute("""\
             CREATE TABLE IF NOT EXISTS log(
                 chat_id VARCHAR(9),
                 source VARCHAR(64),
@@ -34,12 +34,12 @@ class DB:
                 title VARCHAR (128),
                 date float,
                 CONSTRAINT PK_log PRIMARY KEY (chat_id,artist,title)
-            )''')
+            )""")
 
     def _execute(self, query, params=''):
         res = None
         error_msg = ''
-        select = query.lstrip().partition(' ')[0].lower() == "select"
+        select = query.lstrip().partition(' ')[0].lower() == 'select'
         params = list(map(self.sanitize, params))
         for _ in range(self._retries):
             try:
@@ -56,8 +56,9 @@ class DB:
 
                 # Intentionally not catching exceptions here
                 self._connection = pg.connect(database=self._dbname,
-                        user=self._dbuser, password=self._dbpw,
-                        host=self._dbhost)
+                                              user=self._dbuser,
+                                              password=self._dbpw,
+                                              host=self._dbhost)
         else:
             raise pg.Error(error_msg)
 
@@ -65,26 +66,25 @@ class DB:
             return res
         return None
 
-
     def log_result(self, chat_id, result):
         """
         Insert a search result into the database.
         """
         title = result.song.title
         artist = result.song.artist
-        res = self._execute("SELECT artist,title,source FROM log WHERE "
-                            "chat_id=%s AND artist=%s AND title=%s",
+        res = self._execute('SELECT artist,title,source FROM log WHERE '
+                            'chat_id=%s AND artist=%s AND title=%s',
                             [chat_id, artist, title])
 
         if res:
             logger.debug('Updating')
-            self._execute("UPDATE log SET source=%s, date=extract(epoch from "
-                          "now()) WHERE chat_id=%s AND artist=%s AND title=%s",
+            self._execute('UPDATE log SET source=%s, date=extract(epoch from '
+                          'now()) WHERE chat_id=%s AND artist=%s AND title=%s',
                           [result.source.__name__, chat_id, artist, title])
         else:
             logger.debug('Inserting')
-            self._execute("INSERT INTO log (chat_id,source,artist,title,date) "
-                          "VALUES (%s, %s, %s, %s, EXTRACT(EPOCH FROM NOW()))",
+            self._execute('INSERT INTO log (chat_id,source,artist,title,date) '
+                          'VALUES (%s, %s, %s, %s, EXTRACT(EPOCH FROM NOW()))',
                           [chat_id, result.source.__name__, artist, title])
 
         self._connection.commit()
@@ -93,17 +93,17 @@ class DB:
         """
         Return the last search result for a specific song from the database.
         """
-        res = self._execute("SELECT source FROM log WHERE artist=%s AND "
-                            " title=%s", [song.artist, song.title])
+        res = self._execute('SELECT source FROM log WHERE artist=%s AND '
+                            ' title=%s', [song.artist, song.title])
         return res
 
     def get_last_res(self, chat_id):
         """
         Return the last logged result of a specific chat.
         """
-        res = self._execute("SELECT artist,title,source FROM log WHERE "
-                            "chat_id=%s AND date=(SELECT MAX(date) FROM log "
-                            "WHERE chat_id=%s)", [chat_id, chat_id])
+        res = self._execute('SELECT artist,title,source FROM log WHERE '
+                            'chat_id=%s AND date=(SELECT MAX(date) FROM log '
+                            'WHERE chat_id=%s)', [chat_id, chat_id])
 
         return res
 

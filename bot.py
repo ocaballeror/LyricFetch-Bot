@@ -13,7 +13,8 @@ from lyricfetch import id_source
 
 from db import DB as Database
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+logging.basicConfig(format='%(asctime)s - %(name)s - '
+                           '%(levelname)s - %(message)s',
                     level=logging.INFO)
 
 HELPFILE = './help.txt'
@@ -26,7 +27,7 @@ def start(bot, update):
     """
     Function to be called on /start commmand.
     """
-    intro = ""
+    intro = ''
     try:
         helpfile = open(HELPFILE, 'r')
         intro = helpfile.read()
@@ -120,11 +121,11 @@ def get_lyrics(song, chat_id, sources=None):
             msg = f'Lyrics for {song.artist.title()} - {song.title.title()} '\
                    'could not be found'
         else:
-            msg = '''\
+            msg = """\
 FROM: {source}
 *{artist} - {title}*
 
-{lyrics}'''
+{lyrics}"""
             msg = msg.format(source=id_source(res.source, True).lower(),
                              artist=song.artist.title(),
                              title=song.title.title(), lyrics=song.lyrics)
@@ -201,8 +202,8 @@ def parse_config():
             required_keys = ['token', 'dbuser', 'dbname', 'dbpassword']
             for key in required_keys:
                 if key not in data:
-                    logging.critical(f"Key '{key}' not found in the"
-                                     "configuration file. Cannot continue")
+                    logging.critical("Key '%s' not found in the configuration"
+                                     "file. Cannot continue", key)
                     return None
 
             # Set the database host to localhost if it's not set
