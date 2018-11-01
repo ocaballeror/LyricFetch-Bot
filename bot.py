@@ -97,6 +97,19 @@ def other(bot, update):
     send_message(msg, bot, update.message.chat_id)
 
 
+def get_song_from_string(song, chat_id):
+    """
+    Parse the user's input and return a song object from it.
+    """
+    if '-' in song:
+        song = Song.from_string(song)
+    else:
+        last_res = DB.get_last_res(chat_id)
+        song = Song(artist=last_res[0], title=song)
+
+    return song
+
+
 def get_lyrics(song, chat_id, sources=None):
     """
     Get lyrics for a song. The 'song' parameter can be either an unparsed
@@ -106,8 +119,7 @@ def get_lyrics(song, chat_id, sources=None):
     valid = False
     try:
         res = None
-        if isinstance(song, str):
-            song = Song.from_string(song)
+        song = get_song_from_string(song, chat_id)
 
         if song:
             if sources is None:
