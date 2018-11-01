@@ -5,7 +5,7 @@ import time
 import re
 import psycopg2 as pg
 
-from lyricfetch.lyrics import logger
+from lyricfetch import logger
 
 
 class DB:

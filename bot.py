@@ -10,6 +10,7 @@ import lyricfetch as lyrics
 from lyricfetch import Song
 from lyricfetch import get_lastfm
 from lyricfetch import id_source
+from lyricfetch import scraping
 
 from db import DB as Database
 
@@ -47,7 +48,7 @@ def _get_next_song(chat_id):
         last_res = DB.get_last_res(chat_id)
         if not last_res:
             return "You haven't searched for anything yet"
-        song = Song.from_info(artist=last_res[0], title=last_res[1])
+        song = Song(artist=last_res[0], title=last_res[1])
         song.fetch_album_name()
         if not song.album:
             return 'Could not find the album this song belongs to'
@@ -61,7 +62,7 @@ def _get_next_song(chat_id):
         if title == tracks[-1]:
             return 'That was the last song on the album'
         new_title = tracks[tracks.index(title) + 1]
-        new_song = Song.from_info(artist=song.artist, title=new_title,
+        new_song = Song(artist=song.artist, title=new_title,
                                   album=song.album)
         msg, _ = get_lyrics(new_song, chat_id)
     except pg.Error:
@@ -85,8 +86,9 @@ def other(bot, update):
     try:
         last_res = DB.get_last_res(update.message.chat_id)
         if last_res:
-            song = Song.from_info(artist=last_res[0], title=last_res[1])
-            sources = lyrics.exclude_sources(last_res[2], True)
+            song = Song(artist=last_res[0], title=last_res[1])
+            scraping_func = getattr(scraping, last_res[2])
+            sources = lyrics.exclude_sources(scraping_func, True)
             msg, _ = get_lyrics(song, update.message.chat_id, sources)
         else:
             msg = "You haven't searched for anything yet"
