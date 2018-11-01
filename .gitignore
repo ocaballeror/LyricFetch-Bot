@@ -5,3 +5,4 @@ __pycache__
 debuglog
 errlog
 config.json
+*.db

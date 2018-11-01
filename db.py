@@ -3,7 +3,7 @@ Database management and utilities
 """
 import time
 import re
-import psycopg2 as pg
+import sqlite3
 
 from lyricfetch import logger
 
@@ -13,19 +13,18 @@ class DB:
     Main database class. Stores an active connection and contains a series of
     utilities to insert/query data from the database.
     """
-    def __init__(self, retries=5):
+    def __init__(self, filename='lyricfetch.db', retries=5):
         self._connection = None
         self._retries = retries
-        self._dbname = self._dbuser = self._dbpw = self._dbhost = ''
+        self._filename = filename
 
-    def config(self, dbname, dbuser, dbpassword, dbhost):
+    def config(self, filename=None):
         """
         Initial database configuration.
         """
-        self._dbname, self._dbuser, self._dbpw, self._dbhost =\
-            dbname, dbuser, dbpassword, dbhost
-        self._connection = pg.connect(database=dbname, user=dbuser,
-                                      password=dbpassword, host=dbhost)
+        if filename:
+            self._filename = filename
+        self._connection = sqlite3.connect(self._filename)
         self._execute("""\
             CREATE TABLE IF NOT EXISTS log(
                 chat_id VARCHAR(9),
@@ -35,6 +34,7 @@ class DB:
                 date float,
                 CONSTRAINT PK_log PRIMARY KEY (chat_id,artist,title)
             )""")
+        self._connection.close()
 
     def _execute(self, query, params=''):
         res = None
@@ -48,19 +48,19 @@ class DB:
                 if select:
                     res = cur.fetchone()
                 break
-            except pg.OperationalError as error:
+            except sqlite3.Error as error:
                 logger.exception(error)
                 error_msg = str(error)
-                self._connection.close()
+                try:
+                    self._connection.close()
+                except sqlite3.Error:
+                    pass
                 time.sleep(1)
 
                 # Intentionally not catching exceptions here
-                self._connection = pg.connect(database=self._dbname,
-                                              user=self._dbuser,
-                                              password=self._dbpw,
-                                              host=self._dbhost)
+                self._connection = sqlite3.connect(self._filename)
         else:
-            raise pg.Error(error_msg)
+            raise sqlite3.Error(error_msg)
 
         if res:
             return res
@@ -73,18 +73,18 @@ class DB:
         title = result.song.title
         artist = result.song.artist
         res = self._execute('SELECT artist,title,source FROM log WHERE '
-                            'chat_id=%s AND artist=%s AND title=%s',
+                            'chat_id=? AND artist=? AND title=?',
                             [chat_id, artist, title])
 
         if res:
             logger.debug('Updating')
-            self._execute('UPDATE log SET source=%s, date=extract(epoch from '
-                          'now()) WHERE chat_id=%s AND artist=%s AND title=%s',
+            self._execute('UPDATE log SET source=?, date=strftime("%s", "now")'
+                          ' WHERE chat_id=? AND artist=? AND title=?',
                           [result.source.__name__, chat_id, artist, title])
         else:
             logger.debug('Inserting')
             self._execute('INSERT INTO log (chat_id,source,artist,title,date) '
-                          'VALUES (%s, %s, %s, %s, EXTRACT(EPOCH FROM NOW()))',
+                          'VALUES (?, ?, ?, ?, strftime("%s", "now"))',
                           [chat_id, result.source.__name__, artist, title])
 
         self._connection.commit()
@@ -93,8 +93,8 @@ class DB:
         """
         Return the last search result for a specific song from the database.
         """
-        res = self._execute('SELECT source FROM log WHERE artist=%s AND '
-                            ' title=%s', [song.artist, song.title])
+        res = self._execute('SELECT source FROM log WHERE artist=? AND '
+                            ' title=?', [song.artist, song.title])
         return res
 
     def get_last_res(self, chat_id):
@@ -102,8 +102,8 @@ class DB:
         Return the last logged result of a specific chat.
         """
         res = self._execute('SELECT artist,title,source FROM log WHERE '
-                            'chat_id=%s AND date=(SELECT MAX(date) FROM log '
-                            'WHERE chat_id=%s)', [chat_id, chat_id])
+                            'chat_id=? AND date=(SELECT MAX(date) FROM log '
+                            'WHERE chat_id=?)', [chat_id, chat_id])
 
         return res
 

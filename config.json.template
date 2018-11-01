@@ -1,7 +1,4 @@
 {
 	"token": "",
-	"dbuser": "",
-	"dbpassword": "",
-	"dbhost": "",
-	"dbname": ""
+	"db_filename": "lyricfetch.db"
 }

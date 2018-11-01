@@ -103,6 +103,9 @@ def get_song_from_string(song, chat_id):
     """
     Parse the user's input and return a song object from it.
     """
+    if isinstance(song, Song):
+        return song
+
     if '-' in song:
         song = Song.from_string(song)
     else:
@@ -213,16 +216,12 @@ def parse_config():
     try:
         with open(CONFFILE, 'r') as conffile:
             data = json.load(conffile)
-            required_keys = ['token', 'dbuser', 'dbname', 'dbpassword']
+            required_keys = ['token', 'db_filename']
             for key in required_keys:
                 if key not in data:
                     logging.critical("Key '%s' not found in the configuration"
                                      "file. Cannot continue", key)
                     return None
-
-            # Set the database host to localhost if it's not set
-            if 'dbhost' not in data:
-                data['dbhost'] = 'localhost'
 
             return data
     except IOError:
@@ -243,8 +242,7 @@ def main():
     updater.dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
     try:
-        DB.config(config['dbname'], config['dbuser'], config['dbpassword'],
-                  config['dbhost'])
+        DB.config(config['db_filename'])
     except Exception as error:
         print(type(error))
         print(error)
