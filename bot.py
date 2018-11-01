@@ -8,9 +8,9 @@ import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import lyricfetch as lyrics
 from lyricfetch import Song
-from lyricfetch import get_lastfm
-from lyricfetch import id_source
 from lyricfetch import scraping
+from lyricfetch.scraping import get_lastfm
+from lyricfetch.scraping import id_source
 
 from db import DB as Database
 
