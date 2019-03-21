@@ -20,6 +20,11 @@ logging.basicConfig(format='%(asctime)s - %(name)s - '
 
 HELPFILE = './help.txt'
 CONFFILE = './config.json'
+MSG_TEMPLATE = """\
+FROM: {source}
+*{artist} - {title}*
+
+{lyrics}"""
 
 DB = Database()
 
@@ -123,29 +128,25 @@ def get_lyrics(song, chat_id, sources=None):
     msg = ''
     valid = False
     try:
-        res = None
         song = get_song_from_string(song, chat_id)
+        if not song:
+            return 'Invalid format!', False
 
-        if song:
-            if sources is None:
-                res = lyrics.get_lyrics(song)
-            else:
-                res = lyrics.get_lyrics(song, sources)
+        if sources is None:
+            res = lyrics.get_lyrics(song)
+        else:
+            res = lyrics.get_lyrics(song, sources)
 
-        if res is None:
-            msg = 'Wrong format!'
-        elif res.source is None or song.lyrics == '':
+        if res.source is None or song.lyrics == '':
             msg = f'Lyrics for {song.artist.title()} - {song.title.title()} '\
                    'could not be found'
         else:
-            msg = """\
-FROM: {source}
-*{artist} - {title}*
-
-{lyrics}"""
-            msg = msg.format(source=id_source(res.source, True).lower(),
-                             artist=song.artist.title(),
-                             title=song.title.title(), lyrics=song.lyrics)
+            msg = MSG_TEMPLATE.format(
+                source=id_source(res.source, True).lower(),
+                artist=song.artist.title(),
+                title=song.title.title(),
+                lyrics=song.lyrics
+            )
             valid = True
             try:
                 DB.log_result(chat_id, res)
