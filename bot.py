@@ -163,8 +163,10 @@ def find(bot, update):
     """
     Find lyrics for a song.
     """
-    lyrics_str, _ = get_lyrics(update.message.text, update.message.chat_id)
-    send_message(lyrics_str, bot, update.message.chat_id)
+    chat_id = update.message.chat_id
+    bot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.TYPING)
+    lyrics_str, _ = get_lyrics(update.message.text, chat_id)
+    send_message(lyrics_str, bot, chat_id)
 
 
 def send_message(msg, bot, chat_id):
