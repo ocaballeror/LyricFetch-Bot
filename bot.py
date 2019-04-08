@@ -115,6 +115,8 @@ def get_song_from_string(song, chat_id):
         song = Song.from_string(song)
     else:
         last_res = DB.get_last_res(chat_id)
+        if not last_res:
+            return None
         song = Song(artist=last_res[0], title=song)
 
     return song
