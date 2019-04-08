@@ -113,6 +113,6 @@ class DB:
         """
         Close the database connection.
         """
-        if self._connection and self._connection == 0:
+        if self._connection:
             self._connection.commit()
             self._connection.close()
