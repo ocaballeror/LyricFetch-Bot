@@ -62,9 +62,7 @@ class DB:
         else:
             raise sqlite3.Error(error_msg)
 
-        if res:
-            return res
-        return None
+        return res
 
     def log_result(self, chat_id, result):
         """
@@ -88,14 +86,6 @@ class DB:
                           [chat_id, result.source.__name__, artist, title])
 
         self._connection.commit()
-
-    def get_result(self, song):
-        """
-        Return the last search result for a specific song from the database.
-        """
-        res = self._execute('SELECT source FROM log WHERE artist=? AND '
-                            ' title=?', [song.artist, song.title])
-        return res
 
     def get_last_res(self, chat_id):
         """
