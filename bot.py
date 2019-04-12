@@ -44,6 +44,20 @@ def start(bot, update):
     send_message(intro, bot, update.message.chat_id)
 
 
+def get_album_tracks(song):
+    """
+    Get the list of tracks in the album this song belongs to.
+    """
+    song.fetch_album_name()
+    if not song.album:
+        return []
+    tracks = get_lastfm('album.getInfo', artist=song.artist,
+                        album=song.album)
+    tracks = list(t['name'] for t in tracks['album']['tracks']['track'])
+    tracks = list(map(str.lower, tracks))
+    return tracks
+
+
 def _get_next_song(chat_id):
     """
     Get lyrics for the next song in the album.
@@ -54,13 +68,10 @@ def _get_next_song(chat_id):
         if not last_res:
             return "You haven't searched for anything yet"
         song = Song(artist=last_res[0], title=last_res[1])
-        song.fetch_album_name()
-        if not song.album:
+        tracks = get_album_tracks(song)
+        if not tracks:
             return 'Could not find the album this song belongs to'
-        tracks = get_lastfm('album.getInfo', artist=song.artist,
-                            album=song.album)
-        tracks = list(t['name'] for t in tracks['album']['tracks']['track'])
-        tracks = list(map(str.lower, tracks))
+
         title = song.title.lower()
         if title not in tracks:
             return 'Could not find the album this song belongs to'
