@@ -16,7 +16,10 @@ def database():
         db = DB(filename=tmpfile.name)
         db.config()
         yield db
-        db.close()
+        try:
+            db.close()
+        except sqlite3.Error:
+            pass
 
 
 def test_config(database):
