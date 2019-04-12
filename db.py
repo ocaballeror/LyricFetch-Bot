@@ -17,6 +17,7 @@ class DB:
         self._connection = None
         self._retries = retries
         self._filename = filename
+        self._closed = True
 
     def config(self, filename=None):
         """
@@ -34,7 +35,8 @@ class DB:
                 date float,
                 CONSTRAINT PK_log PRIMARY KEY (chat_id,artist,title)
             )""")
-        self._connection.close()
+        self._connection.commit()
+        self._closed = False
 
     def _execute(self, query, params=''):
         res = None
@@ -113,6 +115,7 @@ class DB:
         """
         Close the database connection.
         """
-        if self._connection:
+        if self._connection and not self._closed:
             self._connection.commit()
             self._connection.close()
+        self._closed = True
