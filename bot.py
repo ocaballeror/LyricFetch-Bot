@@ -3,7 +3,7 @@ Main telegram bot module.
 """
 import logging
 import json
-import psycopg2 as pg
+import sqlite3
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import lyricfetch as lyrics
@@ -81,7 +81,7 @@ def _get_next_song(chat_id):
         new_song = Song(artist=song.artist, title=new_title,
                                   album=song.album)
         msg, _ = get_lyrics(new_song, chat_id)
-    except pg.Error:
+    except sqlite3.Error:
         msg = "There was an error while looking through the conversation's "\
                "history. This command is unavailable for now."
     return msg
@@ -108,7 +108,7 @@ def other(bot, update):
             msg, _ = get_lyrics(song, update.message.chat_id, sources)
         else:
             msg = "You haven't searched for anything yet"
-    except pg.Error:
+    except sqlite3.Error:
         msg = "There was an error while looking through the conversation's "\
               "history. This command is unavailable for now."
 
@@ -163,7 +163,7 @@ def get_lyrics(song, chat_id, sources=None):
             valid = True
             try:
                 DB.log_result(chat_id, res)
-            except pg.Error as err:
+            except sqlite3.Error as err:
                 logging.exception(err)
     except Exception as error:
         logging.exception(error)
