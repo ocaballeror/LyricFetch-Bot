@@ -13,11 +13,15 @@ from bot import _get_next_song
 from bot import next_song
 from bot import get_album_tracks
 from bot import other
+from bot import get_song_from_string
 
 
 class Infinite:
     def __getattr__(self, attr):
         return Infinite()
+
+class Nothing:
+    pass
 
 
 message_buffer = []
@@ -196,3 +200,24 @@ def test_other(monkeypatch):
     msg = message_buffer[-1]
     assert repr(song) in msg
     assert scraping_func not in msg
+
+
+def test_get_song_from_string():
+    string = 'artist - title'
+    song = Song('artist', 'title')
+    assert get_song_from_string(string, None) == song
+    assert get_song_from_string(song, None) == song
+
+
+def test_get_song_from_string_lastres(monkeypatch):
+    """
+    Test get a song from string when there is no hyphen and we must get the
+    last result from the database.
+    """
+    chat_id = 1
+    monkeypatch.setattr(bot, 'DB', FakeDB(None))
+    assert get_song_from_string('', chat_id) is None
+
+    song = Song('artist', 'title')
+    monkeypatch.setattr(bot, 'DB', FakeDB(('artist', )))
+    assert get_song_from_string('title', chat_id) == song
