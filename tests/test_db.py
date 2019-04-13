@@ -12,7 +12,7 @@ from db import DB
 def test_config(database):
     assert database._connection
     table_query = 'select name from sqlite_master where type="table"'
-    assert database._execute(table_query) == ('log', )
+    assert database._execute(table_query) == ('log',)
 
 
 def test_execute(database):
@@ -115,8 +115,6 @@ def test_get_last_res(database):
     assert database.get_last_res(chat_id) == ('new artist', title, source)
 
 
-@pytest.mark.parametrize('param, expect', [
-    (1, '1'), ("'hello'", "''hello''")
-])
+@pytest.mark.parametrize('param, expect', [(1, '1'), ("'hello'", "''hello''")])
 def test_sanitize(database, param, expect):
     assert database.sanitize(param) == expect

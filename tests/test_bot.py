@@ -23,6 +23,7 @@ class Infinite:
     def __getattr__(self, attr):
         return Infinite()
 
+
 class Nothing:
     pass
 
@@ -190,6 +191,7 @@ def test_other(monkeypatch):
     """
     Test the 'other' function.
     """
+
     def fake_get_lyrics(*args):
         return str(args), str(args)
 
@@ -222,12 +224,13 @@ def test_get_song_from_string_lastres(monkeypatch):
     assert get_song_from_string('', chat_id) is None
 
     song = Song('artist', 'title')
-    monkeypatch.setattr(bot, 'DB', FakeDB(('artist', )))
+    monkeypatch.setattr(bot, 'DB', FakeDB(('artist',)))
     assert get_song_from_string('title', chat_id) == song
 
 
 def test_log_result(monkeypatch, caplog):
     buffer = []
+
     def fake_log_result(*args):
         buffer.append(args)
 
@@ -255,6 +258,7 @@ def test_get_lyrics_notfound(monkeypatch):
     """
     Test get_lyrics when no lyrics are found.
     """
+
     def assert_not_found(msg, valid):
         msg, valid = get_lyrics(song, 1)
         msg = msg.lower()

@@ -14,9 +14,10 @@ from lyricfetch.scraping import id_source
 
 from db import DB as Database
 
-logging.basicConfig(format='%(asctime)s - %(name)s - '
-                           '%(levelname)s - %(message)s',
-                    level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - ' '%(levelname)s - %(message)s',
+    level=logging.INFO,
+)
 
 HELPFILE = './help.txt'
 CONFFILE = './config.json'
@@ -51,8 +52,7 @@ def get_album_tracks(song):
     song.fetch_album_name()
     if not song.album:
         return []
-    tracks = get_lastfm('album.getInfo', artist=song.artist,
-                        album=song.album)
+    tracks = get_lastfm('album.getInfo', artist=song.artist, album=song.album)
     tracks = list(t['name'] for t in tracks['album']['tracks']['track'])
     tracks = list(map(str.lower, tracks))
     return tracks
@@ -78,12 +78,13 @@ def _get_next_song(chat_id):
         if title == tracks[-1]:
             return 'That was the last song on the album'
         new_title = tracks[tracks.index(title) + 1]
-        new_song = Song(artist=song.artist, title=new_title,
-                                  album=song.album)
+        new_song = Song(artist=song.artist, title=new_title, album=song.album)
         msg, _ = get_lyrics(new_song, chat_id)
     except sqlite3.Error:
-        msg = "There was an error while looking through the conversation's "\
-               "history. This command is unavailable for now."
+        msg = (
+            "There was an error while looking through the conversation's "
+            "history. This command is unavailable for now."
+        )
     return msg
 
 
@@ -112,8 +113,10 @@ def other(bot, update):
         else:
             msg = "You haven't searched for anything yet"
     except sqlite3.Error:
-        msg = "There was an error while looking through the conversation's "\
-              "history. This command is unavailable for now."
+        msg = (
+            "There was an error while looking through the conversation's "
+            "history. This command is unavailable for now."
+        )
 
     send_message(msg, bot, update.message.chat_id)
 
@@ -160,14 +163,16 @@ def get_lyrics(song, chat_id, sources=None):
         res = lyrics.get_lyrics(song, sources)
 
         if res.source is None or song.lyrics == '':
-            msg = f'Lyrics for {song.artist.title()} - {song.title.title()} '\
-                   'could not be found'
+            msg = (
+                f'Lyrics for {song.artist.title()} - {song.title.title()} '
+                'could not be found'
+            )
         else:
             msg = MSG_TEMPLATE.format(
                 source=id_source(res.source, True).lower(),
                 artist=song.artist.title(),
                 title=song.title.title(),
-                lyrics=song.lyrics
+                lyrics=song.lyrics,
             )
             valid = True
             log_result(chat_id, res)
@@ -201,33 +206,37 @@ def send_message(msg, bot, chat_id):
             # If we moved so far back that we got to the starting point, ignore
             # the 'avoid splitting' thing and just cut where you can
             if section == -1 or section <= last_section:
-                section = last_section+chunksize
+                section = last_section + chunksize
 
-            bot.send_message(chat_id=chat_id,
-                             text=msg[last_section:section],
-                             parse_mode='Markdown')
+            bot.send_message(
+                chat_id=chat_id,
+                text=msg[last_section:section],
+                parse_mode='Markdown',
+            )
             last_section = section
 
         if last_section < len(msg):
-            bot.send_message(chat_id=chat_id,
-                             text=msg[last_section:len(msg)],
-                             parse_mode='Markdown')
+            bot.send_message(
+                chat_id=chat_id,
+                text=msg[last_section : len(msg)],
+                parse_mode='Markdown',
+            )
 
     except telegram.TelegramError as error:
         logging.exception(error)
         if not msg:
             msg = 'Unknown error'
 
-        bot.send_message(chat_id=chat_id, text=msg,
-                         parse_mode='Markdown')
+        bot.send_message(chat_id=chat_id, text=msg, parse_mode='Markdown')
 
 
 def unknown(bot, update):
     """
     Fallback function for commands that don't match any of the known ones.
     """
-    send_message("Sorry, I didn't understand that command", bot,
-                 update.message.chat_id)
+    send_message(
+        "Sorry, I didn't understand that command", bot, update.message.chat_id
+    )
 
 
 def parse_config():

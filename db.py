@@ -13,6 +13,7 @@ class DB:
     Main database class. Stores an active connection and contains a series of
     utilities to insert/query data from the database.
     """
+
     def __init__(self, filename='lyricfetch.db', retries=5):
         self._connection = None
         self._retries = retries
@@ -26,7 +27,8 @@ class DB:
         if filename:
             self._filename = filename
         self._connection = sqlite3.connect(self._filename)
-        self._execute("""\
+        self._execute(
+            """
             CREATE TABLE IF NOT EXISTS log(
                 chat_id VARCHAR(9),
                 source VARCHAR(64),
@@ -34,7 +36,8 @@ class DB:
                 title VARCHAR (128),
                 date float,
                 CONSTRAINT PK_log PRIMARY KEY (chat_id,artist,title)
-            )""")
+            )"""
+        )
         self._connection.commit()
         self._closed = False
 
@@ -72,20 +75,26 @@ class DB:
         """
         title = result.song.title
         artist = result.song.artist
-        res = self._execute('SELECT artist,title,source FROM log WHERE '
-                            'chat_id=? AND artist=? AND title=?',
-                            [chat_id, artist, title])
+        res = self._execute(
+            'SELECT artist,title,source FROM log WHERE '
+            'chat_id=? AND artist=? AND title=?',
+            [chat_id, artist, title],
+        )
 
         if res:
             logger.debug('Updating')
-            self._execute('UPDATE log SET source=?, date=strftime("%s", "now")'
-                          ' WHERE chat_id=? AND artist=? AND title=?',
-                          [result.source.__name__, chat_id, artist, title])
+            self._execute(
+                'UPDATE log SET source=?, date=strftime("%s", "now")'
+                ' WHERE chat_id=? AND artist=? AND title=?',
+                [result.source.__name__, chat_id, artist, title],
+            )
         else:
             logger.debug('Inserting')
-            self._execute('INSERT INTO log (chat_id,source,artist,title,date) '
-                          'VALUES (?, ?, ?, ?, strftime("%s", "now"))',
-                          [chat_id, result.source.__name__, artist, title])
+            self._execute(
+                'INSERT INTO log (chat_id,source,artist,title,date) '
+                'VALUES (?, ?, ?, ?, strftime("%s", "now"))',
+                [chat_id, result.source.__name__, artist, title],
+            )
 
         self._connection.commit()
 
@@ -93,9 +102,12 @@ class DB:
         """
         Return the last logged result of a specific chat.
         """
-        res = self._execute('SELECT artist,title,source FROM log WHERE '
-                            'chat_id=? AND date=(SELECT MAX(date) FROM log '
-                            'WHERE chat_id=?)', [chat_id, chat_id])
+        res = self._execute(
+            'SELECT artist,title,source FROM log WHERE '
+            'chat_id=? AND date=(SELECT MAX(date) FROM log '
+            'WHERE chat_id=?)',
+            [chat_id, chat_id],
+        )
 
         return res
 
