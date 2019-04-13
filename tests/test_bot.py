@@ -5,6 +5,7 @@ from tempfile import NamedTemporaryFile
 import pytest
 import lyricfetch
 from lyricfetch import Song
+from lyricfetch.scraping import id_source
 
 sys.path.append('.')
 import bot
@@ -15,6 +16,7 @@ from bot import get_album_tracks
 from bot import other
 from bot import get_song_from_string
 from bot import log_result
+from bot import get_lyrics
 
 
 class Infinite:
@@ -239,3 +241,65 @@ def test_log_result(monkeypatch, caplog):
     records = list(caplog.records)
     assert len(records) == 1
     assert 'sqlite3.error' in caplog.text.lower()
+
+
+def test_get_lyrics_invalid_format(monkeypatch, database):
+    """
+    Call get_lyrics with an invalid song string.
+    """
+    monkeypatch.setattr(bot, 'DB', database)
+    assert get_lyrics('asdf', 1) == ('Invalid format!', False)
+
+
+def test_get_lyrics_notfound(monkeypatch):
+    """
+    Test get_lyrics when no lyrics are found.
+    """
+    def assert_not_found(msg, valid):
+        msg, valid = get_lyrics(song, 1)
+        msg = msg.lower()
+        assert song.artist in msg
+        assert song.title in msg
+        assert 'could not be found' in msg
+        assert not valid
+
+    song = Song('artist', 'title')
+    result = Nothing()
+    result.source = 'hello'
+    monkeypatch.setattr(bot.lyrics, 'get_lyrics', lambda a, b: result)
+
+    msg, valid = get_lyrics(song, 1)
+    assert_not_found(msg, valid)
+
+    result.source = None
+    song.lyrics = 'hello'
+    msg, valid = get_lyrics(song, 1)
+    assert_not_found(msg, valid)
+
+
+def test_get_lyrics_error(monkeypatch, caplog):
+    monkeypatch.setattr(bot, 'get_song_from_string', raise_sqlite_error)
+    msg, valid = get_lyrics('', 1)
+    assert msg == 'Unknown error'
+    assert not valid
+    assert len(caplog.records) == 1
+    assert 'sqlite3.Error' in caplog.text
+
+
+def test_get_lyrics_found(monkeypatch, database):
+    song = Song('artist', 'title', lyrics='lyrics')
+    result = Nothing()
+    result.source = lyricfetch.sources[0]
+    result.song = song
+    source_name = id_source(result.source, full=True).lower()
+
+    monkeypatch.setattr(bot, 'DB', database)
+    monkeypatch.setattr(bot.lyrics, 'get_lyrics', lambda a, b: result)
+    msg, valid = get_lyrics(song, 1)
+    msg = msg.lower()
+    assert valid
+    assert source_name in msg
+    assert song.title in msg
+    assert song.artist in msg
+    assert song.lyrics in msg
+    assert database.get_last_res(1)
