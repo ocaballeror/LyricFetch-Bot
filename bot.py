@@ -105,7 +105,10 @@ def other(bot, update):
             song = Song(artist=last_res[0], title=last_res[1])
             scraping_func = getattr(scraping, last_res[2])
             sources = lyrics.exclude_sources(scraping_func, True)
-            msg, _ = get_lyrics(song, update.message.chat_id, sources)
+            if not sources:
+                msg = "No other sources left to search"
+            else:
+                msg, _ = get_lyrics(song, update.message.chat_id, sources)
         else:
             msg = "You haven't searched for anything yet"
     except sqlite3.Error:
