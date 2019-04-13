@@ -136,6 +136,13 @@ def get_song_from_string(song, chat_id):
     return song
 
 
+def log_result(chat_id, result):
+    try:
+        DB.log_result(chat_id, result)
+    except sqlite3.Error as err:
+        logging.exception(err)
+
+
 def get_lyrics(song, chat_id, sources=None):
     """
     Get lyrics for a song. The 'song' parameter can be either an unparsed
@@ -149,9 +156,8 @@ def get_lyrics(song, chat_id, sources=None):
             return 'Invalid format!', False
 
         if sources is None:
-            res = lyrics.get_lyrics(song)
-        else:
-            res = lyrics.get_lyrics(song, sources)
+            sources = lyrics.sources
+        res = lyrics.get_lyrics(song, sources)
 
         if res.source is None or song.lyrics == '':
             msg = f'Lyrics for {song.artist.title()} - {song.title.title()} '\
@@ -164,10 +170,7 @@ def get_lyrics(song, chat_id, sources=None):
                 lyrics=song.lyrics
             )
             valid = True
-            try:
-                DB.log_result(chat_id, res)
-            except sqlite3.Error as err:
-                logging.exception(err)
+            log_result(chat_id, res)
     except Exception as error:
         logging.exception(error)
         msg = 'Unknown error'
@@ -232,20 +235,12 @@ def parse_config():
     Returns a dictionary with all the necessary data from the configuration
     file.
     """
-    try:
-        with open(CONFFILE, 'r') as conffile:
-            data = json.load(conffile)
-            required_keys = ['token', 'db_filename']
-            for key in required_keys:
-                if key not in data:
-                    logging.critical("Key '%s' not found in the configuration"
-                                     "file. Cannot continue", key)
-                    return None
-
-            return data
-    except IOError:
-        logging.critical('Could not read the configuration file %s', CONFFILE)
-        return None
+    with open(CONFFILE, 'r') as conffile:
+        data = json.load(conffile)
+        required_keys = ['token', 'db_filename']
+        if not all(key in data for key in required_keys):
+            raise KeyError("Key '%s' not found in the config file")
+        return data
 
 
 def main():
@@ -263,8 +258,8 @@ def main():
     try:
         DB.config(config['db_filename'])
     except Exception as error:
-        print(type(error))
-        print(error)
+        logging.critical(type(error))
+        logging.critical(str(error))
         return 2
 
     updater.bot.logger.setLevel(logging.CRITICAL)
