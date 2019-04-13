@@ -12,6 +12,7 @@ from bot import start
 from bot import _get_next_song
 from bot import next_song
 from bot import get_album_tracks
+from bot import other
 
 
 class Infinite:
@@ -44,6 +45,10 @@ class FakeDB:
 
     def get_last_res(self, _):
         return self._last_res
+
+
+def raise_sqlite_error(*args, **kwargs):
+    raise sqlite3.Error()
 
 
 def test_album_tracks(monkeypatch):
@@ -98,11 +103,8 @@ def test_next_song_dberror(monkeypatch):
     """
     Test get the last song when a database error is thrown.
     """
-    def raise_error(*args):
-        raise sqlite3.Error()
-
     f = FakeDB()
-    f.get_last_res = raise_error
+    f.get_last_res = raise_sqlite_error
     monkeypatch.setattr(bot, 'DB', f)
     assert _get_next_song(1).startswith('There was an error while')
 
@@ -138,3 +140,59 @@ def test_next_song(monkeypatch):
     update = Infinite()
     next_song(1, update)
     assert message_buffer[-1] == f'Searching for {song_next}'
+
+
+def test_other_no_lastres(monkeypatch):
+    """
+    Test the 'other' function when there is no last result.
+    """
+    monkeypatch.setattr(bot, 'DB', FakeDB(None))
+    other(Infinite(), Infinite())
+
+    expect = "You haven't searched for anything yet"
+    assert message_buffer[-1] == expect
+
+
+def test_other_dberror(monkeypatch):
+    """
+    Test the 'other' function when a database error is thrown.
+    """
+    f = FakeDB()
+    f.get_last_res = raise_sqlite_error
+    monkeypatch.setattr(bot, 'DB', f)
+    other(Infinite(), Infinite())
+
+    expect = "There was an error"
+    assert message_buffer[-1].startswith(expect)
+
+
+def test_other_no_sources(monkeypatch):
+    """
+    Test the 'other' function when there are no sources left to search.
+    """
+    scraping_func = lyricfetch.sources[-1].__name__
+    song = Song('artist', 'title')
+    fakedb = FakeDB((song.artist, song.title, scraping_func))
+    monkeypatch.setattr(bot, 'DB', fakedb)
+
+    other(Infinite(), Infinite())
+    assert 'No other sources' in message_buffer[-1]
+
+
+def test_other(monkeypatch):
+    """
+    Test the 'other' function.
+    """
+    def fake_get_lyrics(*args):
+        return str(args), str(args)
+
+    scraping_func = lyricfetch.sources[0].__name__
+    song = Song('artist', 'title')
+    fakedb = FakeDB((song.artist, song.title, scraping_func))
+    monkeypatch.setattr(bot, 'DB', fakedb)
+    monkeypatch.setattr(bot, 'get_lyrics', fake_get_lyrics)
+
+    other(Infinite(), Infinite())
+    msg = message_buffer[-1]
+    assert repr(song) in msg
+    assert scraping_func not in msg
