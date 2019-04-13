@@ -14,6 +14,7 @@ from bot import next_song
 from bot import get_album_tracks
 from bot import other
 from bot import get_song_from_string
+from bot import log_result
 
 
 class Infinite:
@@ -221,3 +222,20 @@ def test_get_song_from_string_lastres(monkeypatch):
     song = Song('artist', 'title')
     monkeypatch.setattr(bot, 'DB', FakeDB(('artist', )))
     assert get_song_from_string('title', chat_id) == song
+
+
+def test_log_result(monkeypatch, caplog):
+    buffer = []
+    def fake_log_result(*args):
+        buffer.append(args)
+
+    monkeypatch.setattr(bot.DB, 'log_result', fake_log_result)
+    args = (1, 'result')
+    log_result(*args)
+    assert buffer == [args]
+
+    monkeypatch.setattr(bot.DB, 'log_result', raise_sqlite_error)
+    log_result(*args)
+    records = list(caplog.records)
+    assert len(records) == 1
+    assert 'sqlite3.error' in caplog.text.lower()
