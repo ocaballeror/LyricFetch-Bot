@@ -1,4 +1,5 @@
 import sys
+import json
 import sqlite3
 from tempfile import NamedTemporaryFile
 
@@ -20,6 +21,7 @@ from bot import log_result
 from bot import get_lyrics
 from bot import find
 from bot import unknown
+from bot import parse_config
 
 
 class Infinite:
@@ -347,3 +349,25 @@ def test_unknown():
     assert "didn't understand that" in message_buffer[-1]
 
 
+@pytest.mark.parametrize(
+    'content',
+    [{}, {'token': 'token'}, {'db_filename': 'filename'}],
+    ids=['empty', 'no db filename', 'no token'],
+)
+def test_parse_config_missing_keys(content, monkeypatch):
+    with NamedTemporaryFile(mode='w') as tmpfile:
+        monkeypatch.setattr(bot, 'CONFFILE', tmpfile.name)
+        json.dump(content, tmpfile.file)
+        tmpfile.file.flush()
+        with pytest.raises(KeyError):
+            parse_config()
+
+
+def test_parse_config(monkeypatch):
+    content = {'token': 'token', 'db_filename': 'filename'}
+    with NamedTemporaryFile(mode='w') as tmpfile:
+        monkeypatch.setattr(bot, 'CONFFILE', tmpfile.name)
+        json.dump(content, tmpfile.file)
+        tmpfile.file.flush()
+        data = parse_config()
+    assert data == content
