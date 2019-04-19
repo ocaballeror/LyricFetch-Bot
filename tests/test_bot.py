@@ -3,6 +3,7 @@ import sqlite3
 from tempfile import NamedTemporaryFile
 
 import pytest
+import telegram
 import lyricfetch
 from lyricfetch import Song
 from lyricfetch.scraping import id_source
@@ -17,6 +18,8 @@ from bot import other
 from bot import get_song_from_string
 from bot import log_result
 from bot import get_lyrics
+from bot import find
+from bot import unknown
 
 
 class Infinite:
@@ -307,3 +310,40 @@ def test_get_lyrics_found(monkeypatch, database):
     assert song.artist in msg
     assert song.lyrics in msg
     assert database.get_last_res(1)
+
+
+def test_find(monkeypatch):
+    """
+    Test the 'find' function.
+    """
+    call_log = []
+
+    def log_call(*args, **kwargs):
+        call_log.append((*args, *kwargs.values()))
+
+    def fake_getlyrics(*args, **kwargs):
+        log_call(*args, **kwargs)
+        return 'here are your lyrics', True
+
+    update = Nothing()
+    update.message = Nothing()
+    update.message.chat_id = 1
+    update.message.text = 'message text'
+    bot_arg = Nothing()
+    bot_arg.send_chat_action = log_call
+    monkeypatch.setattr(bot, 'get_lyrics', fake_getlyrics)
+
+    find(bot_arg, update)
+    assert call_log[0] == (1, telegram.ChatAction.TYPING)
+    assert call_log[1] == ('message text', 1)
+    assert message_buffer[-1] == 'here are your lyrics'
+
+
+def test_unknown():
+    """
+    Test the 'unknown' function.
+    """
+    unknown(Infinite(), Infinite())
+    assert "didn't understand that" in message_buffer[-1]
+
+
