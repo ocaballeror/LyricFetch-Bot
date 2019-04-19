@@ -33,23 +33,29 @@ class Nothing:
     pass
 
 
-message_buffer = []
+@pytest.fixture
+def message_buffer(monkeypatch):
+    """
+    Mock the bot's send_message function and replace it with one that just
+    appends everything to a list. This list is returned so that the test can
+    check its contents.
+    """
+    buffer = []
+
+    def append_message(*args, **kwargs):
+        buffer.append(args[0])
+
+    monkeypatch.setattr(bot, 'send_message', append_message)
+    return buffer
 
 
-def append_message(*args, **kwargs):
-    message_buffer.append(args[0])
-
-
-bot.send_message = append_message
-
-
-def test_start(monkeypatch):
+def test_start(monkeypatch, message_buffer):
     with NamedTemporaryFile(mode='w+') as tmpfile:
         monkeypatch.setattr(bot, 'HELPFILE', tmpfile.name)
         tmpfile.file.write('hello world')
         tmpfile.file.flush()
         start(Infinite(), Infinite())
-    assert message_buffer[-1] == 'hello world'
+    assert message_buffer[0] == 'hello world'
 
 
 class FakeDB:
@@ -138,7 +144,7 @@ def test_next_song_existing(monkeypatch):
     assert _get_next_song(1) == f'Searching for {song_next}'
 
 
-def test_next_song(monkeypatch):
+def test_next_song(monkeypatch, message_buffer):
     """
     Test the next_song function, in a similar manner to _get_next_song.
     """
@@ -152,10 +158,10 @@ def test_next_song(monkeypatch):
 
     update = Infinite()
     next_song(1, update)
-    assert message_buffer[-1] == f'Searching for {song_next}'
+    assert message_buffer[0] == f'Searching for {song_next}'
 
 
-def test_other_no_lastres(monkeypatch):
+def test_other_no_lastres(monkeypatch, message_buffer):
     """
     Test the 'other' function when there is no last result.
     """
@@ -163,10 +169,10 @@ def test_other_no_lastres(monkeypatch):
     other(Infinite(), Infinite())
 
     expect = "You haven't searched for anything yet"
-    assert message_buffer[-1] == expect
+    assert message_buffer[0] == expect
 
 
-def test_other_dberror(monkeypatch):
+def test_other_dberror(monkeypatch, message_buffer):
     """
     Test the 'other' function when a database error is thrown.
     """
@@ -176,10 +182,10 @@ def test_other_dberror(monkeypatch):
     other(Infinite(), Infinite())
 
     expect = "There was an error"
-    assert message_buffer[-1].startswith(expect)
+    assert message_buffer[0].startswith(expect)
 
 
-def test_other_no_sources(monkeypatch):
+def test_other_no_sources(monkeypatch, message_buffer):
     """
     Test the 'other' function when there are no sources left to search.
     """
@@ -189,10 +195,10 @@ def test_other_no_sources(monkeypatch):
     monkeypatch.setattr(bot, 'DB', fakedb)
 
     other(Infinite(), Infinite())
-    assert 'No other sources' in message_buffer[-1]
+    assert 'No other sources' in message_buffer[0]
 
 
-def test_other(monkeypatch):
+def test_other(monkeypatch, message_buffer):
     """
     Test the 'other' function.
     """
@@ -207,7 +213,7 @@ def test_other(monkeypatch):
     monkeypatch.setattr(bot, 'get_lyrics', fake_get_lyrics)
 
     other(Infinite(), Infinite())
-    msg = message_buffer[-1]
+    msg = message_buffer[0]
     assert repr(song) in msg
     assert scraping_func not in msg
 
@@ -314,7 +320,7 @@ def test_get_lyrics_found(monkeypatch, database):
     assert database.get_last_res(1)
 
 
-def test_find(monkeypatch):
+def test_find(monkeypatch, message_buffer):
     """
     Test the 'find' function.
     """
@@ -338,15 +344,15 @@ def test_find(monkeypatch):
     find(bot_arg, update)
     assert call_log[0] == (1, telegram.ChatAction.TYPING)
     assert call_log[1] == ('message text', 1)
-    assert message_buffer[-1] == 'here are your lyrics'
+    assert message_buffer[0] == 'here are your lyrics'
 
 
-def test_unknown():
+def test_unknown(message_buffer):
     """
     Test the 'unknown' function.
     """
     unknown(Infinite(), Infinite())
-    assert "didn't understand that" in message_buffer[-1]
+    assert "didn't understand that" in message_buffer[0]
 
 
 @pytest.mark.parametrize(
