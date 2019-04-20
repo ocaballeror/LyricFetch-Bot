@@ -4,6 +4,8 @@ Main telegram bot module.
 import logging
 import json
 import sqlite3
+from functools import partial
+
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import lyricfetch as lyrics
@@ -197,6 +199,7 @@ def send_message(msg, bot, chat_id):
     """
     Splits a string into MAX_LENGTH chunks and sends them as messages.
     """
+    send = partial(bot.send_message, chat_id=chat_id, parse_mode='Markdown')
     try:
         last_section = 0
         chunksize = telegram.constants.MAX_MESSAGE_LENGTH
@@ -208,24 +211,16 @@ def send_message(msg, bot, chat_id):
             if section == -1 or section <= last_section:
                 section = last_section + chunksize
 
-            bot.send_message(
-                chat_id=chat_id,
-                text=msg[last_section:section],
-                parse_mode='Markdown',
-            )
+            send(text=msg[last_section:section])
             last_section = section
 
         if last_section < len(msg):
-            bot.send_message(
-                chat_id=chat_id,
-                text=msg[last_section : len(msg)],
-                parse_mode='Markdown',
-            )
+            send(text=msg[last_section: len(msg)])
 
     except telegram.TelegramError as error:
         logging.exception(error)
         msg = 'Unknown error'
-        bot.send_message(chat_id=chat_id, text=msg, parse_mode='Markdown')
+        send(text=msg)
 
 
 def unknown(bot, update):
@@ -242,7 +237,7 @@ def parse_config():
     Returns a dictionary with all the necessary data from the configuration
     file.
     """
-    with open(CONFFILE, 'r') as conffile:
+    with open(CONFFILE) as conffile:
         data = json.load(conffile)
         required_keys = ['token', 'db_filename']
         if not all(key in data for key in required_keys):
