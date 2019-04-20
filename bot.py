@@ -224,9 +224,7 @@ def send_message(msg, bot, chat_id):
 
     except telegram.TelegramError as error:
         logging.exception(error)
-        if not msg:
-            msg = 'Unknown error'
-
+        msg = 'Unknown error'
         bot.send_message(chat_id=chat_id, text=msg, parse_mode='Markdown')
 
 
