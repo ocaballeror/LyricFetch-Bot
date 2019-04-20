@@ -22,6 +22,7 @@ from bot import get_lyrics
 from bot import find
 from bot import unknown
 from bot import parse_config
+from bot import send_message
 
 
 class Infinite:
@@ -68,6 +69,10 @@ class FakeDB:
 
 def raise_sqlite_error(*args, **kwargs):
     raise sqlite3.Error()
+
+
+def raise_telegram_error(*args, **kwargs):
+    raise telegram.TelegramError('mock telegram error')
 
 
 def test_album_tracks(monkeypatch):
@@ -377,3 +382,61 @@ def test_parse_config(monkeypatch):
         tmpfile.file.flush()
         data = parse_config()
     assert data == content
+
+
+@pytest.fixture
+def bot_send():
+    messages = []
+
+    def append_msg(*args, **kwargs):
+        text = kwargs['text']
+        if text == 'raise error':
+            raise_telegram_error()
+        messages.append(text)
+
+    bot_arg = Nothing()
+    bot_arg.send_message = append_msg
+    bot_arg.messages = messages
+    return bot_arg
+
+
+def test_send_message_error(bot_send, monkeypatch, caplog):
+    msg = 'raise error'
+    send_message(msg, bot_send, 1)
+    assert bot_send.messages[0] == 'Unknown error'
+    assert len(caplog.records) == 1
+    assert 'mock telegram error' in caplog.text
+
+
+def test_send_message_fitting(bot_send):
+    """
+    Test sending a message that is shorter than the maximum allowed by
+    telegram.
+    """
+    msg = 'hello world'
+    send_message(msg, bot_send, 1)
+    assert bot_send.messages[0] == msg
+
+
+def test_send_message_not_fitting(bot_send, monkeypatch):
+    """
+    Test sending a message that is longer than the maximum allowed by
+    telegram.
+    """
+    monkeypatch.setattr(telegram.constants, 'MAX_MESSAGE_LENGTH', 5)
+    msg = 'helloworld'
+    send_message(msg, bot_send, 1)
+    assert bot_send.messages[0] == 'hello'
+    assert bot_send.messages[1] == 'world'
+
+
+def test_send_message_not_fitting_parragraphs(bot_send, monkeypatch):
+    """
+    Test sending a message that is longer than the maximum allowed by
+    telegram, and check that the returned messages are split by parragraph.
+    """
+    monkeypatch.setattr(telegram.constants, 'MAX_MESSAGE_LENGTH', 20)
+    msg = 'hello\n\nworld, this is a message'
+    send_message(msg, bot_send, 1)
+    assert bot_send.messages[0] == 'hello'
+    assert bot_send.messages[1].strip() == 'world, this is a message'
