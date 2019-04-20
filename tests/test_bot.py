@@ -142,9 +142,7 @@ def test_next_song_existing(monkeypatch):
     song_next = Song('artist', 'something else', 'album')
     monkeypatch.setattr(bot, 'DB', FakeDB(('artist', 'title')))
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
-    monkeypatch.setattr(
-        bot, 'get_lyrics', lambda s, c: (f'Searching for {s}', c)
-    )
+    monkeypatch.setattr(bot, 'get_lyrics', lambda s, c: f'Searching for {s}')
 
     assert _get_next_song(1) == f'Searching for {song_next}'
 
@@ -157,9 +155,7 @@ def test_next_song(monkeypatch, message_buffer):
     song_next = Song('artist', 'something else', 'album')
     monkeypatch.setattr(bot, 'DB', FakeDB(('artist', 'title')))
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
-    monkeypatch.setattr(
-        bot, 'get_lyrics', lambda s, c: (f'Searching for {s}', c)
-    )
+    monkeypatch.setattr(bot, 'get_lyrics', lambda s, c: f'Searching for {s}')
 
     update = Infinite()
     next_song(1, update)
@@ -209,7 +205,7 @@ def test_other(monkeypatch, message_buffer):
     """
 
     def fake_get_lyrics(*args):
-        return str(args), str(args)
+        return str(args)
 
     scraping_func = lyricfetch.sources[0].__name__
     song = Song('artist', 'title')
@@ -267,7 +263,7 @@ def test_get_lyrics_invalid_format(monkeypatch, database):
     Call get_lyrics with an invalid song string.
     """
     monkeypatch.setattr(bot, 'DB', database)
-    assert get_lyrics('asdf', 1) == ('Invalid format!', False)
+    assert get_lyrics('asdf', 1) == 'Invalid format!'
 
 
 def test_get_lyrics_notfound(monkeypatch):
@@ -275,33 +271,31 @@ def test_get_lyrics_notfound(monkeypatch):
     Test get_lyrics when no lyrics are found.
     """
 
-    def assert_not_found(msg, valid):
-        msg, valid = get_lyrics(song, 1)
+    def assert_not_found(msg):
+        msg = get_lyrics(song, 1)
         msg = msg.lower()
         assert song.artist in msg
         assert song.title in msg
         assert 'could not be found' in msg
-        assert not valid
 
     song = Song('artist', 'title')
     result = Nothing()
     result.source = 'hello'
     monkeypatch.setattr(bot.lyrics, 'get_lyrics', lambda a, b: result)
 
-    msg, valid = get_lyrics(song, 1)
-    assert_not_found(msg, valid)
+    msg = get_lyrics(song, 1)
+    assert_not_found(msg)
 
     result.source = None
     song.lyrics = 'hello'
-    msg, valid = get_lyrics(song, 1)
-    assert_not_found(msg, valid)
+    msg = get_lyrics(song, 1)
+    assert_not_found(msg)
 
 
 def test_get_lyrics_error(monkeypatch, caplog):
     monkeypatch.setattr(bot, 'get_song_from_string', raise_sqlite_error)
-    msg, valid = get_lyrics('', 1)
+    msg = get_lyrics('', 1)
     assert msg == 'Unknown error'
-    assert not valid
     assert len(caplog.records) == 1
     assert 'sqlite3.Error' in caplog.text
 
@@ -315,9 +309,8 @@ def test_get_lyrics_found(monkeypatch, database):
 
     monkeypatch.setattr(bot, 'DB', database)
     monkeypatch.setattr(bot.lyrics, 'get_lyrics', lambda a, b: result)
-    msg, valid = get_lyrics(song, 1)
+    msg = get_lyrics(song, 1)
     msg = msg.lower()
-    assert valid
     assert source_name in msg
     assert song.title in msg
     assert song.artist in msg
@@ -336,7 +329,7 @@ def test_find(monkeypatch, message_buffer):
 
     def fake_getlyrics(*args, **kwargs):
         log_call(*args, **kwargs)
-        return 'here are your lyrics', True
+        return 'here are your lyrics'
 
     update = Nothing()
     update.message = Nothing()

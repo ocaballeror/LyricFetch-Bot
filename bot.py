@@ -81,7 +81,7 @@ def _get_next_song(chat_id):
             return 'That was the last song on the album'
         new_title = tracks[tracks.index(title) + 1]
         new_song = Song(artist=song.artist, title=new_title, album=song.album)
-        msg, _ = get_lyrics(new_song, chat_id)
+        msg = get_lyrics(new_song, chat_id)
     except sqlite3.Error:
         msg = (
             "There was an error while looking through the conversation's "
@@ -111,7 +111,7 @@ def other(bot, update):
             if not sources:
                 msg = "No other sources left to search"
             else:
-                msg, _ = get_lyrics(song, update.message.chat_id, sources)
+                msg = get_lyrics(song, update.message.chat_id, sources)
         else:
             msg = "You haven't searched for anything yet"
     except sqlite3.Error:
@@ -154,11 +154,10 @@ def get_lyrics(song, chat_id, sources=None):
     string directly from the user or a full Song object.
     """
     msg = ''
-    valid = False
     try:
         song = get_song_from_string(song, chat_id)
         if not song:
-            return 'Invalid format!', False
+            return 'Invalid format!'
 
         if sources is None:
             sources = lyrics.sources
@@ -176,13 +175,12 @@ def get_lyrics(song, chat_id, sources=None):
                 title=song.title.title(),
                 lyrics=song.lyrics,
             )
-            valid = True
             log_result(chat_id, res)
     except Exception as error:
         logging.exception(error)
         msg = 'Unknown error'
 
-    return msg, valid
+    return msg
 
 
 def find(bot, update):
@@ -191,7 +189,7 @@ def find(bot, update):
     """
     chat_id = update.message.chat_id
     bot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.TYPING)
-    lyrics_str, _ = get_lyrics(update.message.text, chat_id)
+    lyrics_str = get_lyrics(update.message.text, chat_id)
     send_message(lyrics_str, bot, chat_id)
 
 
