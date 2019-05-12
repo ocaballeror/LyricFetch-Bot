@@ -1,0 +1,28 @@
+dist: xenial
+
+language: python
+
+jobs:
+    include:
+        - stage: Lint
+          python: "3.7"
+          script: flake8
+        - stage: Test
+          python: "3.7"
+        - python: "3.6"
+
+before_install:
+    - openssl aes-256-cbc -K $encrypted_a23d3f018d7c_key -iv $encrypted_a23d3f018d7c_iv -in .travis.config.json -out config.json -d
+
+install:
+    - pip install pytest pytest-cov
+
+script:
+    - pytest -vv --color=yes --cov .
+
+after_script:
+    - pip install codecov
+    - codecov
+
+notifications:
+    email: false
