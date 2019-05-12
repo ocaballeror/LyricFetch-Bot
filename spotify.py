@@ -214,6 +214,7 @@ class Spotify:
                 _set_release_date(album)
                 elem = dict(id=album['id'], release_date=album['release_date'])
                 name = process(album['name'], INVALID['album'], JUNK['album'])
+                name = name.lower()
                 artist_albums[name] = elem
             query = self.sp.next(query)
         sort = sorted(
@@ -231,7 +232,9 @@ class Spotify:
                     if 'tracks' in response:
                         response = response['tracks']
                     tracks.extend(
-                        process(t['name'], INVALID['name'], JUNK['name'])
+                        process(
+                            t['name'], INVALID['name'], JUNK['name']
+                        ).lower()
                         for t in response['items']
                     )
                     response = self.sp.next(response)
@@ -257,6 +260,7 @@ class Spotify:
         if not self.discography_cache[artist]:
             return 'Unknown'
 
+        title = process(title, INVALID['name'], JUNK['name'])
         for album_name, info in self.discography_cache[artist].items():
             if title.lower() in map(str.lower, info['tracks']):
                 return album_name
