@@ -39,6 +39,7 @@ INVALID = {
 }
 JUNK = {
     'name': [
+        '[^\w ]',
         'bonus( track)?',
         # r'\[.*\]', r'\( *\)',
         'full dynamic range( edition ?)?',
