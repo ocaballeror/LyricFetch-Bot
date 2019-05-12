@@ -73,6 +73,14 @@ class FakeDB:
         return self._last_res
 
 
+fake_res = dict(
+    artist='artist',
+    title='title',
+    album='album',
+    source=lyricfetch.sources[0].__name__,
+)
+
+
 def raise_sqlite_error(*args, **kwargs):
     raise sqlite3.Error()
 
@@ -124,7 +132,7 @@ def test_next_song_no_album(tracks, expect, monkeypatch):
     Test the _get_next_song function when we can't find the name of the next
     song.
     """
-    monkeypatch.setattr(bot, 'DB', FakeDB(('artist', 'title')))
+    monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
     assert _get_next_song(1) == expect
 
@@ -146,7 +154,7 @@ def test_next_song_existing(monkeypatch):
     """
     tracks = ['title', 'something else']
     song_next = Song('artist', 'something else', 'album')
-    monkeypatch.setattr(bot, 'DB', FakeDB(('artist', 'title')))
+    monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
     monkeypatch.setattr(bot, 'get_lyrics', lambda s, c: f'Searching for {s}')
 
@@ -159,7 +167,7 @@ def test_next_song(monkeypatch, message_buffer):
     """
     tracks = ['title', 'something else']
     song_next = Song('artist', 'something else', 'album')
-    monkeypatch.setattr(bot, 'DB', FakeDB(('artist', 'title')))
+    monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
     monkeypatch.setattr(bot, 'get_lyrics', lambda s, c: f'Searching for {s}')
 
@@ -196,9 +204,9 @@ def test_other_no_sources(monkeypatch, message_buffer):
     """
     Test the 'other' function when there are no sources left to search.
     """
-    scraping_func = lyricfetch.sources[-1].__name__
-    song = Song('artist', 'title')
-    fakedb = FakeDB((song.artist, song.title, scraping_func))
+    res = fake_res.copy()
+    res['source'] = lyricfetch.sources[-1].__name__
+    fakedb = FakeDB(res)
     monkeypatch.setattr(bot, 'DB', fakedb)
 
     other(Infinite(), Infinite())
@@ -214,8 +222,8 @@ def test_other(monkeypatch, message_buffer):
         return str(args)
 
     scraping_func = lyricfetch.sources[0].__name__
-    song = Song('artist', 'title')
-    fakedb = FakeDB((song.artist, song.title, scraping_func))
+    song = Song('artist', 'title', album='album')
+    fakedb = FakeDB(fake_res)
     monkeypatch.setattr(bot, 'DB', fakedb)
     monkeypatch.setattr(bot, 'get_lyrics', fake_get_lyrics)
 
@@ -241,9 +249,9 @@ def test_get_song_from_string_lastres(monkeypatch):
     monkeypatch.setattr(bot, 'DB', FakeDB(None))
     assert get_song_from_string('', chat_id) is None
 
-    song = Song('artist', 'title')
-    monkeypatch.setattr(bot, 'DB', FakeDB(('artist',)))
-    assert get_song_from_string('title', chat_id) == song
+    song = Song('artist', 'other title')
+    monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
+    assert get_song_from_string('other title', chat_id) == song
 
 
 def test_log_result(monkeypatch, caplog):

@@ -12,7 +12,7 @@ from db import DB
 def test_config(database):
     assert database._connection
     table_query = 'select name from sqlite_master where type="table"'
-    assert database._execute(table_query) == ('log',)
+    assert database._execute(table_query) == {'name': 'log'}
 
 
 def test_execute(database):
@@ -26,7 +26,7 @@ def test_execute(database):
     where chat_id=? and artist=? and title=?
     """
     ret = database._execute(select, values)
-    assert ret == values
+    assert tuple(ret.values()) == values
 
 
 def test_execute_connection_closed(database):
@@ -44,7 +44,7 @@ def test_execute_connection_closed(database):
     where chat_id=? and artist=? and title=?
     """
     ret = database._execute(select, values)
-    assert ret == values
+    assert tuple(ret.values()) == values
 
 
 def test_execute_connection_retries(database):
@@ -77,12 +77,16 @@ def test_log_result(database):
 
     database.log_result(chat_id, result)
     query = database._execute('select chat_id, source, artist, title from log')
-    assert query == (chat_id, 'source', 'artist', 'title')
+    assert query == dict(
+        chat_id=chat_id, source='source', artist='artist', title='title'
+    )
 
     source.__name__ = 'new source'
     database.log_result(chat_id, result)
     query = database._execute('select chat_id, source, artist, title from log')
-    assert query == (chat_id, 'new source', 'artist', 'title')
+    assert query == dict(
+        chat_id=chat_id, source='new source', artist='artist', title='title'
+    )
 
 
 def test_get_last_res(database):
@@ -90,29 +94,36 @@ def test_get_last_res(database):
     artist = 'artist'
     title = 'title'
     source = 'source'
+    album = 'album'
     now = int(time.time())
     insert = """
     insert into log
-        (chat_id, artist, title, source, date)
-        values (?, ?, ?, ?, ?)
+        (chat_id, artist, title, source, album, date)
+        values (?, ?, ?, ?, ?, ?)
     """
 
     # Insert a record and retrieve it
-    database._execute(insert, (chat_id, artist, title, source, now))
+    database._execute(insert, (chat_id, artist, title, source, album, now))
     database._connection.commit()
-    assert database.get_last_res(chat_id) == (artist, title, source)
+    assert database.get_last_res(chat_id) == dict(
+        source=source, artist=artist, title=title, album=album
+    )
 
     # Update the chat id with a newer entry
     artist = 'new artist'
     now += 1
-    database._execute(insert, (chat_id, artist, title, source, now))
-    assert database.get_last_res(chat_id) == (artist, title, source)
+    database._execute(insert, (chat_id, artist, title, source, album, now))
+    assert database.get_last_res(chat_id) == dict(
+        source=source, artist=artist, title=title, album=album
+    )
 
     # Updating with an older entry should return the new one again
     artist = 'old artist'
     now -= 2
-    database._execute(insert, (chat_id, artist, title, source, now))
-    assert database.get_last_res(chat_id) == ('new artist', title, source)
+    database._execute(insert, (chat_id, artist, title, source, album, now))
+    assert database.get_last_res(chat_id) == dict(
+        source=source, artist='new artist', title=title, album=album
+    )
 
 
 @pytest.mark.parametrize('param, expect', [(1, '1'), ("'hello'", "''hello''")])
