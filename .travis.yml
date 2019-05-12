@@ -15,7 +15,7 @@ before_install:
     - openssl aes-256-cbc -K $encrypted_a23d3f018d7c_key -iv $encrypted_a23d3f018d7c_iv -in .travis.config.json -out config.json -d
 
 install:
-    - pip install pytest pytest-cov
+    - pip install -r requirements_dev.txt
 
 script:
     - pytest -vv --color=yes --cov .
