@@ -29,6 +29,15 @@ def _set_release_date(album):
         release += '-01'
     album['release_date'] = date(*(map(int, release.split('-'))))
 
+def credentials(func):
+    """
+    Assert that the api is configured or raise with an error message.
+    """
+    def assert_credentials(self, *args, **kwargs):
+        assert self.sp, 'Credentials not configured'
+        return func(self, *args, **kwargs)
+    return assert_credentials
+
 
 class Spotify:
     def __init__(self):
@@ -67,6 +76,7 @@ class Spotify:
             logger.info('actually loading cache from file')
             self.discography_cache.update(pickle.load(cache_file))
 
+    @credentials
     def get_discography(self, artist, song_name):
         """
         Return the list of albums and their track names.
@@ -119,6 +129,7 @@ class Spotify:
             k: v for k, v in artist_albums.items() if v.get('tracks', None)
         }
 
+    @credentials
     def fetch_discography(self, song):
         """
         Get the entire discography of the artist of this song and store it in
@@ -137,6 +148,7 @@ class Spotify:
             logger.exception(e)
             logger.debug('discography not found')
 
+    @credentials
     def fetch_album(self, song):
         """
         Get the name of the album for a song from spotify.
@@ -152,6 +164,7 @@ class Spotify:
                 return album_name
         return 'Unknown'
 
+    @credentials
     def get_album_tracks(self, song):
         """
         Get the list of tracks of the album this song belongs to.
