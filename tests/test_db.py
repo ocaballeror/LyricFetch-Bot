@@ -1,12 +1,8 @@
-import sys
 import time
 
 import pytest
 import sqlite3
 from lyricfetch import Song
-
-sys.path.append('.')
-from db import DB
 
 
 def test_config(database):
