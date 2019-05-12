@@ -22,7 +22,7 @@ INVALID = {
         '^unknown album',
         '^undefined',
         'greatest hits',
-        r'\(live( (at|from|in)[^)]*)?\)',
+        r'live( (at|from|in)[^)]*)?',
         '^(the )?(very )?best of',
         '^the very best',
         'compilation',
@@ -39,11 +39,12 @@ JUNK = {
     ],
     # 'artist': [r'\(.*\)'],
     'album': [
-        # r'\(.*\)', r'\[.*\]',
+        r'\(.*\)', r'\[.*\]',
         'deluxe(version|edition)',
         'special edition',
         're-?issue',
         'full dynamic range( edition ?)?',
+        'deluxe( version| edition)? ?',
         r'( *\- *)?\(?(\d+ *)?re(master|issue)(ed)?(\d+ *)?\)?',
     ],
 }
