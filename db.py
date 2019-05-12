@@ -92,11 +92,13 @@ class DB:
 
         if res:
             logger.debug('Updating')
-            self._execute(
-                'UPDATE log SET source=?, date=strftime("%s", "now")'
-                ' WHERE chat_id=? AND artist=? AND title=?',
-                [result.source.__name__, chat_id, artist, title],
-            )
+            update = 'UPDATE log SET source=?, date=strftime("%s", "now")'
+            values = [result.source.__name__, chat_id, artist, title]
+            if res['album'] == 'Unknown':
+                update += ', album=?'
+                values.insert(1, album)
+            update += ' WHERE chat_id=? AND artist=? AND title=?'
+            self._execute(update, values)
         else:
             logger.debug('Inserting')
             self._execute(
