@@ -196,15 +196,15 @@ def get_lyrics(song, chat_id, sources=None):
             sources = lyrics.sources
         res = get_lyrics_threaded(song, sources)
 
+        artist = capwords(song.artist)
+        title = capwords(song.title)
         if res.source is None or song.lyrics == '':
-            artist = capwords(song.artist)
-            title = capwords(song.title)
             msg = f'Lyrics for {artist} - {title} could not be found'
         else:
             msg = MSG_TEMPLATE.format(
                 source=id_source(res.source, True).lower(),
-                artist=song.artist.title(),
-                title=song.title.title(),
+                artist=artist,
+                title=title,
                 lyrics=song.lyrics,
             )
             log_result(chat_id, res)
