@@ -296,7 +296,7 @@ def test_get_lyrics_notfound(monkeypatch):
     song = Song('artist', 'title')
     result = Nothing()
     result.source = 'hello'
-    monkeypatch.setattr(bot.lyrics, 'get_lyrics', lambda a, b: result)
+    monkeypatch.setattr(bot, 'get_lyrics_threaded', lambda a, b: result)
 
     msg = get_lyrics(song, 1)
     assert_not_found(msg)
@@ -323,7 +323,7 @@ def test_get_lyrics_found(monkeypatch, database):
     source_name = id_source(result.source, full=True).lower()
 
     monkeypatch.setattr(bot, 'DB', database)
-    monkeypatch.setattr(bot.lyrics, 'get_lyrics', lambda a, b: result)
+    monkeypatch.setattr(bot, 'get_lyrics_threaded', lambda a, b: result)
     msg = get_lyrics(song, 1)
     msg = msg.lower()
     assert source_name in msg
