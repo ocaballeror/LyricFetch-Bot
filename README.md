@@ -2,6 +2,7 @@
 [![Build Status](https://travis-ci.org/ocaballeror/LyricFetch-bot.svg?branch=master)](https://travis-ci.org/ocaballeror/LyricFetch-bot)
 [![Codecov](https://codecov.io/gh/ocaballeror/LyricFetch-Bot/branch/master/graph/badge.svg)](https://codecov.io/gh/ocaballeror/LyricFetch-Bot)
 [![Requirements](https://requires.io/github/ocaballeror/LyricFetch-Bot/requirements.svg)](https://requires.io/github/ocaballeror/LyricFetch-Bot/requirements/)
+
 A Telegram bot to fetch lyrics from the internet.
 
 This is the telegram interface for [LyricFetch](https://github.com/ocaballeror/LyricFetch), and it will use it as a backend to find lyrics for the requested song. Please refer to that project for implementation details on how the lyrics are fetched and all those kinds of things.
