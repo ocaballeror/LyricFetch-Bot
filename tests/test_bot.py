@@ -74,9 +74,9 @@ class FakeDB:
 
 
 fake_res = dict(
-    artist='artist',
-    title='title',
-    album='album',
+    artist='slugdge',
+    title='putrid fairytale',
+    album='esoteric malacology',
     source=lyricfetch.sources[0].__name__,
 )
 
@@ -119,7 +119,7 @@ def test_next_song_no_last(monkeypatch):
         (None, "Could not find the album this song belongs to"),
         ([], "Could not find the album this song belongs to"),
         (['something'], "Could not find the album this song belongs to"),
-        (['title'], "That was the last song on the album"),
+        ([fake_res['title']], "That was the last song on the album"),
     ],
     ids=[
         'None return',
@@ -153,8 +153,8 @@ def test_next_song_existing(monkeypatch):
     Test the _get_next_song existing when everything goes smoothly and the next
     song is found.
     """
-    tracks = ['title', 'something else']
-    song_next = Song('artist', 'something else', 'album')
+    tracks = [fake_res['title'], 'war squids']
+    song_next = Song(fake_res['artist'], 'war squids', fake_res['album'])
     monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
     monkeypatch.setattr(bot, 'get_lyrics', lambda s, c: f'Searching for {s}')
@@ -166,8 +166,8 @@ def test_next_song(monkeypatch, message_buffer):
     """
     Test the next_song function, in a similar manner to _get_next_song.
     """
-    tracks = ['title', 'something else']
-    song_next = Song('artist', 'something else', 'album')
+    tracks = [fake_res['title'], 'crop killer']
+    song_next = Song(fake_res['artist'], 'crop killer', fake_res['album'])
     monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
     monkeypatch.setattr(bot, 'get_lyrics', lambda s, c: f'Searching for {s}')
@@ -223,7 +223,7 @@ def test_other(monkeypatch, message_buffer):
         return str(args)
 
     scraping_func = lyricfetch.sources[0].__name__
-    song = Song('artist', 'title', album='album')
+    song = Song(fake_res['artist'], fake_res['title'], fake_res['album'])
     fakedb = FakeDB(fake_res)
     monkeypatch.setattr(bot, 'DB', fakedb)
     monkeypatch.setattr(bot, 'get_lyrics', fake_get_lyrics)
@@ -235,8 +235,8 @@ def test_other(monkeypatch, message_buffer):
 
 
 def test_get_song_from_string():
-    string = 'artist - title'
-    song = Song('artist', 'title')
+    string = 'carcass - mount of execution'
+    song = Song('carcass', 'mount of execution')
     assert get_song_from_string(string, None) == song
     assert get_song_from_string(song, None) == song
 
@@ -250,9 +250,9 @@ def test_get_song_from_string_lastres(monkeypatch):
     monkeypatch.setattr(bot, 'DB', FakeDB(None))
     assert get_song_from_string('', chat_id) is None
 
-    song = Song('artist', 'other title')
+    song = Song(fake_res['artist'], 'the spectral burrows')
     monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
-    assert get_song_from_string('other title', chat_id) == song
+    assert get_song_from_string('the spectral burrows', chat_id) == song
 
 
 def test_log_result(monkeypatch, caplog):
@@ -293,7 +293,7 @@ def test_get_lyrics_notfound(monkeypatch):
         assert song.title in msg
         assert 'could not be found' in msg
 
-    song = Song('artist', 'title')
+    song = Song('nothing more', 'christ copyright')
     result = Nothing()
     result.source = 'hello'
     monkeypatch.setattr(bot, 'get_lyrics_threaded', lambda a, b: result)
@@ -316,7 +316,7 @@ def test_get_lyrics_error(monkeypatch, caplog):
 
 
 def test_get_lyrics_found(monkeypatch, database):
-    song = Song('artist', 'title', lyrics='lyrics')
+    song = Song('obituary', 'ten thousand ways to die', lyrics='lyrics')
     result = Nothing()
     result.source = lyricfetch.sources[0]
     result.song = song

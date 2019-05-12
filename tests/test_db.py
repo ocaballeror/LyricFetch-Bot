@@ -68,7 +68,7 @@ class Empty:
 
 def test_log_result(database):
     chat_id = 'chat_id'
-    song = Song(title='title', artist='artist')
+    song = Song('lucis absentia', 'gehenna gate')
     source = Empty()
     source.__name__ = 'source'
     result = Empty()
@@ -78,23 +78,23 @@ def test_log_result(database):
     database.log_result(chat_id, result)
     query = database._execute('select chat_id, source, artist, title from log')
     assert query == dict(
-        chat_id=chat_id, source='source', artist='artist', title='title'
+        chat_id=chat_id, source='source', artist=song.artist, title=song.title
     )
 
     source.__name__ = 'new source'
     database.log_result(chat_id, result)
     query = database._execute('select chat_id, source, artist, title from log')
     assert query == dict(
-        chat_id=chat_id, source='new source', artist='artist', title='title'
+        chat_id=chat_id, source='new source', artist=song.artist, title=song.title
     )
 
 
 def test_get_last_res(database):
     chat_id = 'id'
-    artist = 'artist'
-    title = 'title'
+    artist = 'testament'
+    title = 'a day of reckoning'
     source = 'source'
-    album = 'album'
+    album = 'the new order'
     now = int(time.time())
     insert = """
     insert into log
