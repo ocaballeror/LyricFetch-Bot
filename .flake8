@@ -1,0 +1,4 @@
+[flake8]
+ignore = E203
+select = B,C,E,F,W
+per-file-ignores = tests/*.py: E402
