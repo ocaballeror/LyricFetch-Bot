@@ -5,7 +5,7 @@ import time
 import re
 import sqlite3
 
-from lyricfetch import logger
+from logger import logger
 
 
 def row_factory(c, r):
@@ -53,6 +53,7 @@ class DB:
         error_msg = ''
         select = query.lstrip().partition(' ')[0].lower() == 'select'
         params = list(map(self.sanitize, params))
+        logger.debug(query)
         for _ in range(self._retries):
             try:
                 cur = self._connection.cursor()

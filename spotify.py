@@ -9,6 +9,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 from util import process
 from util import chunks
 from util import is_value_invalid
+from logger import logger
 
 
 CACHE_DIR = Path('.cache')
@@ -45,17 +46,22 @@ class Spotify:
         """
         Store the current organization in a cache file.
         """
+        logger.info('writing cache')
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         with open(CACHE_DIR / '.cache-spotify', 'wb') as cache_file:
             pickle.dump(self.discography_cache, cache_file)
+        logger.info('wrote cache')
 
     def load_cache(self):
         """
         Return a list of files that are cached and can be ignored.
         """
+        logger.info('reading cache')
         if not (CACHE_DIR / '.cache-spotify').is_file():
+            logger.info('cache dir does not exist. quitting')
             return
         with open(CACHE_DIR / '.cache-spotify', 'rb') as cache_file:
+            logger.info('actually loading cache from file')
             self.discography_cache.update(pickle.load(cache_file))
 
     def get_discography(self, artist, song_name):
@@ -117,14 +123,16 @@ class Spotify:
         """
         artist, title = song.artist, song.title
         if artist in self.discography_cache:
-            print('cached')
+            logger.debug('found discography in cache')
             return
 
         try:
             discog = self.get_discography(artist, title)
+            logger.debug('got discography')
             self.discography_cache[artist] = discog
         except Exception as e:
-            pass
+            logger.exception(e)
+            logger.debug('discography not found')
 
     def fetch_album(self, song):
         """
@@ -145,29 +153,16 @@ class Spotify:
         """
         Get the list of tracks of the album this song belongs to.
         """
-        print('searching for', song)
         if song.album:
-            print('song album: ', song.album)
             song.album = process(song.album, key='album', invalid=False)
-            print('song album: ', song.album)
             self.fetch_discography(song)
         else:
-            print('this has no album .searching')
+            logger.debug('song has no embedded album. searching')
             song.album = self.fetch_album(song)
-            print('got this album: ', song.album)
+            logger.debug('got this album: %s', song.album)
         try:
             if not song.album or song.album == 'Unknown':
-                print('no album found')
                 raise KeyError('Album not found')
-            print('artist in discog: ', song.artist in self.discography_cache)
-            print(
-                'album in artist: ',
-                song.album in self.discography_cache.get(song.artist, []),
-            )
-            print(
-                'tracks in album: ',
-                'tracks' in self.discography_cache[song.artist][song.album],
-            )
             return self.discography_cache[song.artist][song.album]['tracks']
         except KeyError:
             msg = 'Spotify could not find the list of tracks for %s'

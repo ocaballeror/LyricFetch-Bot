@@ -18,11 +18,8 @@ from lyricfetch.scraping import id_source
 from db import DB as Database
 from spotify import Spotify
 from util import capwords
+from logger import logger
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - ' '%(levelname)s - %(message)s',
-    level=logging.INFO,
-)
 
 HELPFILE = './help.txt'
 CONFFILE = './config.json'
@@ -46,7 +43,7 @@ def start(bot, update):
         intro = helpfile.read()
         helpfile.close()
     except Exception as error:
-        logging.exception(error)
+        logger.exception(error)
 
     send_message(intro, bot, update.message.chat_id)
 
@@ -79,9 +76,9 @@ def get_album_tracks(song):
     """
     tracks = get_album_tracks_spotify(song)
     if tracks:
-        print('got tracks from spotify')
+        logger.debug('found track list from spotify')
         return tracks
-    print('no spotify, searching last')
+    logger.debug('no track list from spotify, searching lastfm')
     return get_album_tracks_lastfm(song)
 
 
@@ -100,10 +97,12 @@ def _get_next_song(chat_id):
         song = Song(last_res['artist'], last_res['title'], album)
         tracks = get_album_tracks(song)
         if not tracks:
+            logger.info('no track list found')
             return 'Could not find the album this song belongs to'
 
         title = song.title.lower()
         if title not in tracks:
+            logger.info('title not found in track list')
             return 'Could not find the album this song belongs to'
         if title == tracks[-1]:
             return 'That was the last song on the album'
@@ -175,7 +174,7 @@ def log_result(chat_id, result):
     try:
         DB.log_result(chat_id, result)
     except sqlite3.Error as err:
-        logging.exception(err)
+        logger.exception(err)
 
 
 def get_lyrics(song, chat_id, sources=None):
@@ -188,6 +187,7 @@ def get_lyrics(song, chat_id, sources=None):
         song = get_song_from_string(song, chat_id)
         if not song:
             return 'Invalid format!'
+        logger.info('Searching for song %s', song)
 
         if sources is None:
             sources = lyrics.sources
@@ -206,7 +206,7 @@ def get_lyrics(song, chat_id, sources=None):
             )
             log_result(chat_id, res)
     except Exception as error:
-        logging.exception(error)
+        logger.exception(error)
         msg = 'Unknown error'
 
     return msg
@@ -245,7 +245,7 @@ def send_message(msg, bot, chat_id):
             send(text=msg[last_section: len(msg)])
 
     except telegram.TelegramError as error:
-        logging.exception(error)
+        logger.exception(error)
         msg = 'Unknown error'
         send(text=msg)
 
@@ -289,16 +289,16 @@ def main():
     try:
         DB.config(config['db_filename'])
     except Exception as error:
-        logging.critical(type(error))
-        logging.critical(str(error))
+        logger.critical(type(error))
+        logger.critical(str(error))
         return 2
 
     updater.bot.logger.setLevel(logging.CRITICAL)
     updater.start_polling()
 
-    print('Started')
+    logger.info('Started')
     updater.idle()
-    print('Closing')
+    logger.info('Closing')
     SP.save_cache()
     try:
         DB.close()
