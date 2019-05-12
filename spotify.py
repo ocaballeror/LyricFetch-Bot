@@ -95,12 +95,12 @@ class Spotify:
         artist_albums = {}
         while query:
             for album in query['items']:
-                if is_value_invalid(album['name'], key='album'):
+                name = process(album['name'], key='album')
+                name = name.lower()
+                if is_value_invalid(name, key='album'):
                     continue
                 _set_release_date(album)
                 elem = dict(id=album['id'], release_date=album['release_date'])
-                name = process(album['name'], key='album')
-                name = name.lower()
                 artist_albums[name] = elem
             query = self.sp.next(query)
         sort = sorted(
