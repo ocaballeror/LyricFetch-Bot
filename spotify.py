@@ -1,6 +1,7 @@
 import re
 import string
 import pickle
+import logging
 from pathlib import Path
 from datetime import date
 
@@ -275,3 +276,36 @@ class Spotify:
             if title.lower() in map(str.lower, info['tracks']):
                 return album_name
         return 'Unknown'
+
+    def get_album_tracks(self, song):
+        """
+        Get the list of tracks of the album this song belongs to.
+        """
+        print('searching for', song)
+        if song.album:
+            print('song album: ', song.album)
+            song.album = process(song.album, junk=JUNK['album'])
+            print('song album: ', song.album)
+            self.fetch_discography(song)
+        else:
+            print('this has no album .searching')
+            song.album = self.fetch_album(song)
+            print('got this album: ', song.album)
+        try:
+            if not song.album or song.album == 'Unknown':
+                print('no album found')
+                raise KeyError('Album not found')
+            print('artist in discog: ', song.artist in self.discography_cache)
+            print(
+                'album in artist: ',
+                song.album in self.discography_cache.get(song.artist, []),
+            )
+            print(
+                'tracks in album: ',
+                'tracks' in self.discography_cache[song.artist][song.album],
+            )
+            return self.discography_cache[song.artist][song.album]['tracks']
+        except KeyError:
+            msg = 'Spotify could not find the list of tracks for %s'
+            logging.info(msg, song)
+            return []
