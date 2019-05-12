@@ -6,3 +6,4 @@ debuglog
 errlog
 config.json
 *.db
+.cache
