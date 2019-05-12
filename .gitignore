@@ -7,3 +7,4 @@ errlog
 config.json
 *.db
 .cache
+.coverage
