@@ -245,19 +245,29 @@ class Spotify:
             k: v for k, v in artist_albums.items() if v.get('tracks', None)
         }
 
+    def fetch_discography(self, song):
+        """
+        Get the entire discography of the artist of this song and store it in
+        the discography cache.
+        """
+        artist, title = song.artist, song.title
+        if artist in self.discography_cache:
+            print('cached')
+            return
+
+        try:
+            discog = self.get_discography(artist, title)
+            self.discography_cache[artist] = discog
+        except Exception as e:
+            pass
+
     def fetch_album(self, song):
         """
         Get the name of the album for a song from spotify.
         """
         artist, title = song.artist, song.title
-        if artist not in self.discography_cache:
-            try:
-                discog = self.get_discography(artist, title)
-            except Exception:
-                discog = None
-            self.discography_cache[artist] = discog
-
-        if not self.discography_cache[artist]:
+        self.fetch_discography(song)
+        if not self.discography_cache.get(artist, ''):
             return 'Unknown'
 
         title = process(title, INVALID['name'], JUNK['name'])
