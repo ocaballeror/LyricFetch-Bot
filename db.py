@@ -117,7 +117,14 @@ class DB:
             'WHERE chat_id=?)',
             [chat_id, chat_id],
         )
+        if not res:
+            return res
 
+        res = {
+            k: v.replace("''", "'")
+            for k, v in res.items()
+            if isinstance(v, str)
+        }
         return res
 
     @staticmethod
