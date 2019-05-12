@@ -11,6 +11,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import lyricfetch as lyrics
 from lyricfetch import Song
 from lyricfetch import scraping
+from lyricfetch.run import get_lyrics_threaded
 from lyricfetch.scraping import get_lastfm
 from lyricfetch.scraping import id_source
 
@@ -177,7 +178,7 @@ def get_lyrics(song, chat_id, sources=None):
 
         if sources is None:
             sources = lyrics.sources
-        res = lyrics.get_lyrics(song, sources)
+        res = get_lyrics_threaded(song, sources)
 
         if res.source is None or song.lyrics == '':
             msg = (
