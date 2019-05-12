@@ -113,13 +113,12 @@ def process(value, key, invalid=True, junk=True):
         return 'Unknown'
     replace = replace_info.copy()
 
-    if junk:
-        for delete in junk:
-            replace[delete] = ''
+    for delete in junk:
+        replace[delete] = ''
     for regex, sub in replace.items():
         old_value = value
         value = re.sub(regex, sub, value, flags=re.IGNORECASE)
         if not value:
             value = old_value
 
-    return value
+    return value.strip()
