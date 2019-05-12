@@ -1,4 +1,5 @@
 import logging
+
 fmt = '%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s'
 formatter = logging.Formatter(fmt)
 logger = logging.getLogger('bot')

@@ -245,7 +245,7 @@ def send_message(msg, bot, chat_id):
             last_section = section
 
         if last_section < len(msg):
-            send(text=msg[last_section: len(msg)])
+            send(text=msg[last_section : len(msg)])
 
     except telegram.TelegramError as error:
         logger.exception(error)

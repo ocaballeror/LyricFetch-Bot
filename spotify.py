@@ -29,13 +29,16 @@ def _set_release_date(album):
         release += '-01'
     album['release_date'] = date(*(map(int, release.split('-'))))
 
+
 def credentials(func):
     """
     Assert that the api is configured or raise with an error message.
     """
+
     def assert_credentials(self, *args, **kwargs):
         assert self.sp, 'Credentials not configured'
         return func(self, *args, **kwargs)
+
     return assert_credentials
 
 

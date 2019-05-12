@@ -39,7 +39,8 @@ JUNK = {
     ],
     # 'artist': [r'\(.*\)'],
     'album': [
-        r'\(.*\)', r'\[.*\]',
+        r'\(.*\)',
+        r'\[.*\]',
         'deluxe(version|edition)',
         'special edition',
         're-?issue',
@@ -48,6 +49,7 @@ JUNK = {
         r'( *\- *)?\(?(\d+ *)?re(master|issue)(ed)?(\d+ *)?\)?',
     ],
 }
+
 
 def is_value_invalid(value, key):
     """

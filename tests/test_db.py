@@ -85,7 +85,10 @@ def test_log_result(database):
     database.log_result(chat_id, result)
     query = database._execute('select chat_id, source, artist, title from log')
     assert query == dict(
-        chat_id=chat_id, source='new source', artist=song.artist, title=song.title
+        chat_id=chat_id,
+        source='new source',
+        artist=song.artist,
+        title=song.title,
     )
 
 

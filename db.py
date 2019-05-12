@@ -86,8 +86,7 @@ class DB:
         artist = result.song.artist
         album = result.song.album or 'Unknown'
         res = self._execute(
-            'SELECT * FROM log WHERE '
-            'chat_id=? AND artist=? AND title=?',
+            'SELECT * FROM log WHERE chat_id=? AND artist=? AND title=?',
             [chat_id, artist, title],
         )
 
