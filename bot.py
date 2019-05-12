@@ -86,7 +86,10 @@ def _get_next_song(chat_id):
         last_res = DB.get_last_res(chat_id)
         if not last_res:
             return "You haven't searched for anything yet"
-        song = Song(artist=last_res[0], title=last_res[1])
+
+        album = last_res['album']
+        album = album if album != 'Unknown' else None
+        song = Song(last_res['artist'], last_res['title'], album)
         tracks = get_album_tracks(song)
         if not tracks:
             return 'Could not find the album this song belongs to'

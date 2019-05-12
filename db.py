@@ -40,6 +40,7 @@ class DB:
                 source VARCHAR(64),
                 artist VARCHAR(64),
                 title VARCHAR (128),
+                album VARCHAR (128) default 'unknown',
                 date float,
                 CONSTRAINT PK_log PRIMARY KEY (chat_id,artist,title)
             )"""
@@ -82,6 +83,7 @@ class DB:
         """
         title = result.song.title
         artist = result.song.artist
+        album = result.song.album or 'Unknown'
         res = self._execute(
             'SELECT * FROM log WHERE '
             'chat_id=? AND artist=? AND title=?',
@@ -93,14 +95,14 @@ class DB:
             self._execute(
                 'UPDATE log SET source=?, date=strftime("%s", "now")'
                 ' WHERE chat_id=? AND artist=? AND title=?',
-                [result.source.__name__, chat_id, artist, title],
+                [result.source.__name__, chat_id, artist, title, album],
             )
         else:
             logger.debug('Inserting')
             self._execute(
-                'INSERT INTO log (chat_id,source,artist,title,date) '
-                'VALUES (?, ?, ?, ?, strftime("%s", "now"))',
-                [chat_id, result.source.__name__, artist, title],
+                'INSERT INTO log (chat_id,source,artist,title,album,date) '
+                'VALUES (?, ?, ?, ?, ?, strftime("%s", "now"))',
+                [chat_id, result.source.__name__, artist, title, album],
             )
 
         self._connection.commit()
