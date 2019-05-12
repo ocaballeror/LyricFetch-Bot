@@ -95,7 +95,7 @@ class DB:
             self._execute(
                 'UPDATE log SET source=?, date=strftime("%s", "now")'
                 ' WHERE chat_id=? AND artist=? AND title=?',
-                [result.source.__name__, chat_id, artist, title, album],
+                [result.source.__name__, chat_id, artist, title],
             )
         else:
             logger.debug('Inserting')
