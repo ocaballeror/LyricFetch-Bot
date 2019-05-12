@@ -56,18 +56,7 @@ def is_value_invalid(value, key):
     The argument 'key' specifies the key to use for the global `junk` and
     `invalid` dictionaries.
     """
-    if any(re.search(r, value, re.I) for r in INVALID[key]):
-        return True
-
-    replace = replace_info.copy()
-    for delete in JUNK[key]:
-        replace[delete] = ''
-    for regex, sub in replace.items():
-        value = re.sub(regex, sub, value, flags=re.IGNORECASE)
-        if not value:
-            return True
-
-    return False
+    return any(re.search(r, value, re.I) for r in INVALID[key])
 
 
 def chunks(list0, list1, n):
