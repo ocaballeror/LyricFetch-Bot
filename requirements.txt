@@ -1,2 +1,3 @@
 python-telegram-bot>=8.0
 lyricfetch>=1.1.0
+spotipy
