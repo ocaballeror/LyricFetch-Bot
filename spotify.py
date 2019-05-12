@@ -110,6 +110,13 @@ def capwords(value):
     for separator in ['(', '.', ',', '"']:
         value = separator.join(map(_capword, value.split(separator)))
 
+    # Properly capitalize some all-caps words
+    regs = ['[vx]?i+[vx]?', 'zz', 'ny', 'ufo']
+    for reg in regs:
+        reg = re.compile(f'^{reg}$', re.IGNORECASE)
+        map_ = map(lambda i: i.upper() if reg.match(i) else i, value.split())
+        value = ' '.join(map_)
+
     return value
 
 
@@ -136,14 +143,6 @@ def process(value, invalid=None, junk=None):
         if not value:
             value = old_value
 
-    value = capwords(value)
-
-    # Properly capitalize some all-caps words
-    regs = ['[vx]?i+[vx]?', 'zz', 'ny', 'ufo']
-    for reg in regs:
-        reg = re.compile(f'^{reg}$', re.IGNORECASE)
-        map_ = map(lambda i: i.upper() if reg.match(i) else i, value.split())
-        value = ' '.join(map_)
     return value
 
 
