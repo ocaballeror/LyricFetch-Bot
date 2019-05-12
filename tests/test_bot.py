@@ -26,12 +26,18 @@ from bot import send_message
 
 
 class Infinite:
+    """
+    Dummy class that you can infinitely dot-walk.
+    """
+
     def __getattr__(self, attr):
         return Infinite()
 
 
 class Nothing:
-    pass
+    """
+    Empty class to add arbitrary attributes to.
+    """
 
 
 @pytest.fixture

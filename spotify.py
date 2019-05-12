@@ -37,6 +37,9 @@ class Spotify:
         self.sp = None
 
     def configure(self, client_id, client_secret):
+        """
+        Set up spotify API client with the specified credentials.
+        """
         credentials = SpotifyClientCredentials(
             client_id=client_id, client_secret=client_secret
         )

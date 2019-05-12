@@ -171,6 +171,9 @@ def get_song_from_string(song, chat_id):
 
 
 def log_result(chat_id, result):
+    """
+    Log a search result to the database.
+    """
     try:
         DB.log_result(chat_id, result)
     except sqlite3.Error as err:
