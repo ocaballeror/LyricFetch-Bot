@@ -122,8 +122,10 @@ def other(bot, update):
     try:
         last_res = DB.get_last_res(update.message.chat_id)
         if last_res:
-            song = Song(artist=last_res[0], title=last_res[1])
-            scraping_func = getattr(scraping, last_res[2])
+            song = Song(
+                last_res['artist'], last_res['title'], last_res['album']
+            )
+            scraping_func = getattr(scraping, last_res['source'])
             sources = lyrics.exclude_sources(scraping_func, True)
             if not sources:
                 msg = "No other sources left to search"
@@ -153,7 +155,7 @@ def get_song_from_string(song, chat_id):
         last_res = DB.get_last_res(chat_id)
         if not last_res:
             return None
-        song = Song(artist=last_res[0], title=song)
+        song = Song(artist=last_res['artist'], title=song)
 
     return song
 

@@ -8,6 +8,11 @@ import sqlite3
 from lyricfetch import logger
 
 
+def row_factory(c, r):
+    "Row factory to make our db connection return dictionaries."
+    return dict(zip([col[0] for col in c.description], r))
+
+
 class DB:
     """
     Main database class. Stores an active connection and contains a series of
@@ -27,6 +32,7 @@ class DB:
         if filename:
             self._filename = filename
         self._connection = sqlite3.connect(self._filename)
+        self._connection.row_factory = row_factory
         self._execute(
             """
             CREATE TABLE IF NOT EXISTS log(
@@ -64,6 +70,7 @@ class DB:
 
                 # Intentionally not catching exceptions here
                 self._connection = sqlite3.connect(self._filename)
+                self._connection.row_factory = row_factory
         else:
             raise sqlite3.Error(error_msg)
 
