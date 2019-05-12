@@ -1,4 +1,6 @@
 {
 	"token": "",
 	"db_filename": "lyricfetch.db"
+    "SPOTIFY_CLIENT_ID": "",
+    "SPOTIFY_CLIENT_SECRET": ""
 }
