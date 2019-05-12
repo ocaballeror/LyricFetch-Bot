@@ -14,7 +14,7 @@ import bot
 from bot import start
 from bot import _get_next_song
 from bot import next_song
-from bot import get_album_tracks
+from bot import get_album_tracks_lastfm
 from bot import other
 from bot import get_song_from_string
 from bot import log_result
@@ -89,16 +89,17 @@ def raise_telegram_error(*args, **kwargs):
     raise telegram.TelegramError('mock telegram error')
 
 
-def test_album_tracks(monkeypatch):
+def test_album_tracks_lastfm(monkeypatch):
     """
-    Test the get_album_tracks function.
+    Test the get_album_tracks_lastfm function.
     """
     song = Song('Sabaton', '1 6 4 8')
     with monkeypatch.context() as mkp:
-        mkp.setattr(lyricfetch.Song, 'fetch_album_name', lambda x: None)
-        assert get_album_tracks(song) == []
+        # An empty list should be returned if we can't find the album's name
+        mkp.setattr(song, 'fetch_album_name', lambda: None)
+        assert get_album_tracks_lastfm(song) == []
 
-    tracks = get_album_tracks(song)
+    tracks = get_album_tracks_lastfm(song)
     tracks = '\n'.join(tracks)
     assert 'carolus rex' in tracks
     assert 'en livstid i krig' in tracks
