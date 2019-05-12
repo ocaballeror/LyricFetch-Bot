@@ -120,7 +120,7 @@ def capwords(value):
     return value
 
 
-def process(value, invalid=None, junk=None):
+def process(value, key, invalid=True, junk=True):
     """
     Remove weird characters from a string. Meant for album names, artists
     and titles.
@@ -128,8 +128,8 @@ def process(value, invalid=None, junk=None):
     if not value:
         return 'Unknown'
     value = value.lower()
-    invalid = invalid or []
-    junk = junk or []
+    invalid = INVALID[key] if invalid else []
+    junk = JUNK[key] if junk else []
     if any(re.match(inv, value) for inv in invalid):
         return 'Unknown'
     replace = replace_info.copy()
@@ -213,7 +213,7 @@ class Spotify:
                     continue
                 _set_release_date(album)
                 elem = dict(id=album['id'], release_date=album['release_date'])
-                name = process(album['name'], INVALID['album'], JUNK['album'])
+                name = process(album['name'], key='album')
                 name = name.lower()
                 artist_albums[name] = elem
             query = self.sp.next(query)
@@ -232,9 +232,7 @@ class Spotify:
                     if 'tracks' in response:
                         response = response['tracks']
                     tracks.extend(
-                        process(
-                            t['name'], INVALID['name'], JUNK['name']
-                        ).lower()
+                        process(t['name'], key='name').lower()
                         for t in response['items']
                     )
                     response = self.sp.next(response)
@@ -270,7 +268,7 @@ class Spotify:
         if not self.discography_cache.get(artist, ''):
             return 'Unknown'
 
-        title = process(title, INVALID['name'], JUNK['name'])
+        title = process(title, key='name')
         for album_name, info in self.discography_cache[artist].items():
             if title.lower() in map(str.lower, info['tracks']):
                 return album_name
@@ -283,7 +281,7 @@ class Spotify:
         print('searching for', song)
         if song.album:
             print('song album: ', song.album)
-            song.album = process(song.album, junk=JUNK['album'])
+            song.album = process(song.album, key='album', invalid=False)
             print('song album: ', song.album)
             self.fetch_discography(song)
         else:
