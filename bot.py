@@ -17,6 +17,7 @@ from lyricfetch.scraping import id_source
 
 from db import DB as Database
 from spotify import Spotify
+from util import capwords
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - ' '%(levelname)s - %(message)s',
@@ -193,10 +194,9 @@ def get_lyrics(song, chat_id, sources=None):
         res = get_lyrics_threaded(song, sources)
 
         if res.source is None or song.lyrics == '':
-            msg = (
-                f'Lyrics for {song.artist.title()} - {song.title.title()} '
-                'could not be found'
-            )
+            artist = capwords(song.artist)
+            title = capwords(song.title)
+            msg = f'Lyrics for {artist} - {title} could not be found'
         else:
             msg = MSG_TEMPLATE.format(
                 source=id_source(res.source, True).lower(),
