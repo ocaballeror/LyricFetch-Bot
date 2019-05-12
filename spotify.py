@@ -160,13 +160,16 @@ def _set_release_date(album):
 
 
 class Spotify:
-    def __init__(self, client_id, client_secret):
+    def __init__(self):
+        self.discography_cache = {}
+        self.load_cache()
+        self.sp = None
+
+    def configure(self, client_id, client_secret):
         credentials = SpotifyClientCredentials(
             client_id=client_id, client_secret=client_secret
         )
         self.sp = spotipy.Spotify(client_credentials_manager=credentials)
-        self.discography_cache = {}
-        self.load_cache()
 
     def save_cache(self):
         """
@@ -238,10 +241,11 @@ class Spotify:
             k: v for k, v in artist_albums.items() if v.get('tracks', None)
         }
 
-    def fetch_album(self, artist, title):
+    def fetch_album(self, song):
         """
         Get the name of the album for a song from spotify.
         """
+        artist, title = song.artist, song.title
         if artist not in self.discography_cache:
             try:
                 discog = self.get_discography(artist, title)

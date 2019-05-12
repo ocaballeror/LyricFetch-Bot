@@ -15,6 +15,7 @@ from lyricfetch.scraping import get_lastfm
 from lyricfetch.scraping import id_source
 
 from db import DB as Database
+from spotify import Spotify
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - ' '%(levelname)s - %(message)s',
@@ -30,6 +31,7 @@ FROM: {source}
 {lyrics}"""
 
 DB = Database()
+SP = Spotify()
 
 
 def start(bot, update):
@@ -47,11 +49,25 @@ def start(bot, update):
     send_message(intro, bot, update.message.chat_id)
 
 
+def fetch_album_name(song):
+    """
+    Find the album name for a song and set it as its 'album' attribute.
+    """
+    if song.album:
+        return
+
+    song.album = SP.fetch_album(song)
+    if song.album:
+        return
+
+    song.fetch_album_name()
+
+
 def get_album_tracks(song):
     """
     Get the list of tracks in the album this song belongs to.
     """
-    song.fetch_album_name()
+    fetch_album_name(song)
     if not song.album:
         return []
     tracks = get_lastfm('album.getInfo', artist=song.artist, album=song.album)
@@ -254,6 +270,8 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('next', next_song))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
     updater.dispatcher.add_handler(MessageHandler(Filters.command, unknown))
+
+    SP.configure(config['SPOTIFY_CLIENT_ID'], config['SPOTIFY_CLIENT_SECRET'])
 
     try:
         DB.config(config['db_filename'])
