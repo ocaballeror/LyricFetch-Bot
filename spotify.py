@@ -169,7 +169,7 @@ class Spotify:
         """
         Get the list of tracks of the album this song belongs to.
         """
-        if song.album:
+        if song.album and song.album != 'Unknown':
             song.album = process(song.album, key='album', invalid=False)
             self.fetch_discography(song)
         else:
