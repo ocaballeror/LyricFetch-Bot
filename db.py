@@ -83,7 +83,7 @@ class DB:
         title = result.song.title
         artist = result.song.artist
         res = self._execute(
-            'SELECT artist,title,source FROM log WHERE '
+            'SELECT * FROM log WHERE '
             'chat_id=? AND artist=? AND title=?',
             [chat_id, artist, title],
         )
@@ -110,7 +110,7 @@ class DB:
         Return the last logged result of a specific chat.
         """
         res = self._execute(
-            'SELECT artist,title,source FROM log WHERE '
+            'SELECT artist,title,source,album FROM log WHERE '
             'chat_id=? AND date=(SELECT MAX(date) FROM log '
             'WHERE chat_id=?)',
             [chat_id, chat_id],
