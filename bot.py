@@ -50,31 +50,38 @@ def start(bot, update):
     send_message(intro, bot, update.message.chat_id)
 
 
-def fetch_album_name(song):
+def get_album_tracks_spotify(song):
     """
-    Find the album name for a song and set it as its 'album' attribute.
+    Search spotify for list of tracks in the album this song belongs to.
     """
-    if song.album:
-        return
+    return SP.get_album_tracks(song)
 
-    song.album = SP.fetch_album(song)
-    if song.album:
-        return
 
+def get_album_tracks_lastfm(song):
+    """
+    Search lastfm for list of tracks in the album this song belongs to.
+    """
     song.fetch_album_name()
+    if not song.album:
+        return []
+    tracks = get_lastfm('album.getInfo', artist=song.artist, album=song.album)
+    if not tracks:
+        return []
+    tracks = list(t['name'] for t in tracks['album']['tracks']['track'])
+    tracks = list(map(str.lower, tracks))
+    return tracks
 
 
 def get_album_tracks(song):
     """
     Get the list of tracks in the album this song belongs to.
     """
-    fetch_album_name(song)
-    if not song.album:
-        return []
-    tracks = get_lastfm('album.getInfo', artist=song.artist, album=song.album)
-    tracks = list(t['name'] for t in tracks['album']['tracks']['track'])
-    tracks = list(map(str.lower, tracks))
-    return tracks
+    tracks = get_album_tracks_spotify(song)
+    if tracks:
+        print('got tracks from spotify')
+        return tracks
+    print('no spotify, searching last')
+    return get_album_tracks_lastfm(song)
 
 
 def _get_next_song(chat_id):
