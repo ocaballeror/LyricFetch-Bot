@@ -299,7 +299,11 @@ def main():
     print('Started')
     updater.idle()
     print('Closing')
-    DB.close()
+    SP.save_cache()
+    try:
+        DB.close()
+    except sqlite3.Error:
+        pass
 
     return 0
 
