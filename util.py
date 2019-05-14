@@ -1,17 +1,6 @@
 import re
 import string
 
-replace_info = {
-    r'^[0-9]+\.': '',
-    r'^[0-9]+ ?\- ?[^0-9]': '',
-    r"[\*%|;/\n\r]": ' ',
-    '[^ ]&[^ ]': ' and ',
-    '&': 'and',
-    '[`’]': "'",
-    '…': '...',
-    r'\.\.(?=[^\.])': '.. ',
-    ' {2,}': ' ',
-}
 INVALID = {
     'name': [r'\(?live( (at|@|from|in)[^)]*)?\)?'],
     'album': [
@@ -26,6 +15,17 @@ INVALID = {
     ],
 }
 JUNK = {
+    'all': {
+        r'^[0-9]+\.': '',
+        r'^[0-9]+ ?\- ?[^0-9]': '',
+        r"[\*%|;/\n\r]": ' ',
+        '[^ ]&[^ ]': ' and ',
+        '&': 'and',
+        '[`’]': "'",
+        '…': '...',
+        r'\.\.(?=[^\.])': '.. ',
+        ' {2,}': ' ',
+    },
     'name': [
         r'\[.*\]',
         r'\( *\)',
@@ -112,7 +112,7 @@ def process(value, key, invalid=True, junk=True):
     if invalid and is_value_invalid(value, key):
         return 'Unknown'
     junk = JUNK[key] if junk else []
-    replace = replace_info.copy()
+    replace = JUNK['all'].copy()
 
     for delete in junk:
         replace[delete] = ''
