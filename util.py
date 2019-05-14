@@ -13,16 +13,13 @@ replace_info = {
     ' {2,}': ' ',
 }
 INVALID = {
-    'name': [
-        r'\(live( (at|from|in)[^)]*)?\)',
-        r'( *\- *)?\(?(\d+ *)?demo?(\d+ *)?\)?',
-    ],
-    'artist': ['various( artists)?', 'unkown artist'],
+    'name': [r'\(?live( (at|@|from|in)[^)]*)?\)?'],
     'album': [
         '^unknown album',
         '^undefined',
         'greatest hits',
         r'live( (at|from|in)[^)]*)?',
+        r'\(?live\)?$',
         '^(the )?(very )?best of',
         '^the very best',
         'compilation',
@@ -30,14 +27,17 @@ INVALID = {
 }
 JUNK = {
     'name': [
-        r'[^\w ]',
+        r'\[.*\]',
+        r'\( *\)',
+        r' *-.+$',
+        r'[^\w \.\']',
         'bonus( track)?',
-        # r'\[.*\]', r'\( *\)',
         'full dynamic range( edition ?)?',
         r'\((the )?original (version|soundtrack)\)',
         r'( *\- *)?\(?(\d+ *)?re(master|issue|mixed)(ed)?(\d+ *)?\)?',
+        r'original (version|edition)',
+        r'\(?demo\)?$',
     ],
-    # 'artist': [r'\(.*\)'],
     'album': [
         r'\(.*\)',
         r'\[.*\]',
