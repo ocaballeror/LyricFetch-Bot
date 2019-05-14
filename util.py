@@ -109,10 +109,9 @@ def process(value, key, invalid=True, junk=True):
     if not value:
         return 'Unknown'
     value = value.lower()
-    invalid = INVALID[key] if invalid else []
-    junk = JUNK[key] if junk else []
-    if any(re.match(inv, value) for inv in invalid):
+    if invalid and is_value_invalid(value, key):
         return 'Unknown'
+    junk = JUNK[key] if junk else []
     replace = replace_info.copy()
 
     for delete in junk:
