@@ -4,7 +4,9 @@ from pathlib import Path
 from datetime import date
 
 import spotipy
+from spotipy import oauth2
 from spotipy.oauth2 import SpotifyClientCredentials
+from lyricfetch import Song
 
 from util import process
 from util import chunks
@@ -48,6 +50,10 @@ class Spotify:
         self.load_cache()
         self.sp = None
 
+        self.scope = 'user-read-currently-playing'
+        self.redirect_uri = 'http://46.101.110.129:7000/auth'
+        self.sp_oauth = None
+
     def configure(self, client_id, client_secret):
         """
         Set up spotify API client with the specified credentials.
@@ -56,6 +62,47 @@ class Spotify:
             client_id=client_id, client_secret=client_secret
         )
         self.sp = spotipy.Spotify(client_credentials_manager=credentials)
+        self.sp.cache_path = None
+        self.sp_oauth = oauth2.SpotifyOAuth(
+            self.sp.client_credentials_manager.client_id,
+            self.sp.client_credentials_manager.client_secret,
+            self.redirect_uri,
+            scope=self.scope,
+        )
+
+    def get_auth_url(self, chat_id):
+        """
+        Get the url that the user must open to authenticate with spotify.
+        """
+        return self.sp_oauth.get_authorize_url(state=chat_id)
+
+    def get_access_token(self, code):
+        """
+        Get an authorization token given a code from the redirect url.
+        """
+        token_info = self.sp_oauth.get_access_token(code)
+        print(token_info)
+        return token_info['access_token'], token_info['expires_at']
+
+    def refresh_access_token(self, token):
+        return self.sp_oauth.refresh_access_token(token)
+
+    def currently_playing(self, token):
+        """
+        Get the song that the user to whom this token belongs to is playing
+        right now.
+
+        Returns None if they are not playing anything.
+        """
+        client = spotipy.Spotify(auth=token)
+        try:
+            song = client.currently_playing()['item']
+            title = song['name']
+            album = song['album']['name']
+            artist = song['artists'][0]['name']
+            return Song(artist, title, album)
+        except (KeyError, TypeError):
+            return None
 
     def save_cache(self):
         """

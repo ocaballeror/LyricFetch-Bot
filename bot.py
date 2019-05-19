@@ -4,7 +4,9 @@ Main telegram bot module.
 import logging
 import json
 import sqlite3
+import time
 from functools import partial
+from collections import defaultdict
 
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
@@ -19,6 +21,7 @@ from db import DB as Database
 from spotify import Spotify
 from util import capwords
 from logger import logger
+from server import Server
 
 
 HELPFILE = './help.txt'
@@ -31,6 +34,7 @@ FROM: {source}
 
 DB = Database()
 SP = Spotify()
+HANDLERS = defaultdict(list)
 
 
 def start(bot, update):
@@ -125,6 +129,49 @@ def next_song(bot, update):
     send_message(msg, bot, update.message.chat_id)
 
 
+def get_sp_token(chat_id):
+    """
+    Get a saved Spotify user token. Refresh it if it expired.
+    """
+    token = DB.get_sp_token(chat_id)
+    if not token:
+        return None
+
+    if token['expires'] and int(token['expires']) < time.time():
+        token = SP.refresh_access_token(token['token'])
+        DB.save_sp_token(
+            token['token_info'], chat_id=chat_id, expires=token['expires']
+        )
+    return token['token']
+
+
+def now(bot, update):
+    """
+    Search for the lyrics of the song that the user is playing on Spotify.
+    """
+    chat_id = update.message.chat_id
+    send = partial(send_message, bot=bot, chat_id=chat_id)
+    token = get_sp_token(chat_id)
+    if not token:
+        auth_url = SP.get_auth_url(chat_id)
+        send('Please open this link to log in to Spotify')
+        send(auth_url, raw=True)
+        while True:
+            token = DB.get_sp_token(chat_id)
+            if token and token['token']:
+                break
+            time.sleep(1)
+
+        token, expires = SP.get_access_token(token['token'])
+        DB.save_sp_token(token, chat_id, expires=expires)
+    current = SP.currently_playing(token)
+    if not current:
+        send('There is nothing playing!')
+    else:
+        lyrics_str = get_lyrics(current, chat_id)
+        send(lyrics_str)
+
+
 def other(bot, update):
     """
     Use a different source to find lyrics for the last searched song.
@@ -156,6 +203,8 @@ def get_song_from_string(song, chat_id):
     """
     Parse the user's input and return a song object from it.
     """
+    if not song:
+        return song
     if isinstance(song, Song):
         return song
 
@@ -215,6 +264,20 @@ def get_lyrics(song, chat_id, sources=None):
     return msg
 
 
+def text(bot, update):
+    """
+    Generic text input handler.
+    """
+    chat_id = update.message.chat_id
+    if HANDLERS[chat_id]:
+        handler = HANDLERS[chat_id].pop()
+        handler(bot, update)
+        return
+
+    # If there is no priority handler, call the default "find"
+    find(bot, update)
+
+
 def find(bot, update):
     """
     Find lyrics for a song.
@@ -225,11 +288,12 @@ def find(bot, update):
     send_message(lyrics_str, bot, chat_id)
 
 
-def send_message(msg, bot, chat_id):
+def send_message(msg, bot, chat_id, raw=False):
     """
     Splits a string into MAX_LENGTH chunks and sends them as messages.
     """
-    send = partial(bot.send_message, chat_id=chat_id, parse_mode='Markdown')
+    parse_mode = 'Markdown' if not raw else None
+    send = partial(bot.send_message, chat_id=chat_id, parse_mode=parse_mode)
     try:
         last_section = 0
         chunksize = telegram.constants.MAX_MESSAGE_LENGTH
@@ -284,7 +348,8 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CommandHandler('other', other))
     updater.dispatcher.add_handler(CommandHandler('next', next_song))
-    updater.dispatcher.add_handler(MessageHandler(Filters.text, find))
+    updater.dispatcher.add_handler(CommandHandler('now', now))
+    updater.dispatcher.add_handler(MessageHandler(Filters.text, text))
     updater.dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
     SP.configure(config['SPOTIFY_CLIENT_ID'], config['SPOTIFY_CLIENT_SECRET'])
@@ -296,6 +361,9 @@ def main():
         logger.critical(str(error))
         return 2
 
+    server = Server(db_config=dict(filename=config['db_filename']))
+    server.start()
+
     updater.bot.logger.setLevel(logging.CRITICAL)
     updater.start_polling()
 
@@ -303,6 +371,7 @@ def main():
     updater.idle()
     logger.info('Closing')
     SP.save_cache()
+    server.terminate()
     try:
         DB.close()
     except sqlite3.Error:

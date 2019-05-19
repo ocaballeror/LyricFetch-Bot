@@ -46,6 +46,16 @@ class DB:
             )"""
         )
         self._connection.commit()
+        self._execute(
+            """
+            CREATE TABLE IF NOT EXISTS sp_tokens(
+                chat_id VARCHAR(9) NOT NULL,
+                token VARCHAR(512),
+                expires INT,
+                CONSTRAINT PK_sp_tokens PRIMARY KEY (chat_id)
+            )"""
+        )
+        self._connection.commit()
         self._closed = False
 
     def _execute(self, query, params=''):
@@ -54,12 +64,15 @@ class DB:
         select = query.lstrip().partition(' ')[0].lower() == 'select'
         params = list(map(self.sanitize, params))
         logger.debug(query)
+        logger.debug(params)
         for _ in range(self._retries):
             try:
                 cur = self._connection.cursor()
                 cur.execute(query, params)
                 if select:
                     res = cur.fetchone()
+                else:
+                    self._connection.commit()
                 break
             except sqlite3.Error as error:
                 logger.exception(error)
@@ -129,12 +142,38 @@ class DB:
         }
         return res
 
+    def get_sp_token(self, chat_id):
+        """
+        Get the saved token for this chat id.
+
+        Returns None if the chat_id is not in the database.
+        """
+        select = "SELECT token, expires FROM sp_tokens WHERE chat_id=?"
+        res = self._execute(select, [chat_id])
+        return res
+
+    def save_sp_token(self, token, chat_id, expires=None):
+        """
+        Save the token for a chat_id.
+        """
+        select = "SELECT chat_id FROM sp_tokens WHERE chat_id=?"
+        exists = self._execute(select, [chat_id])
+        if exists:
+            update = "UPDATE sp_tokens SET token=?, expires=? WHERE chat_id=?"
+        else:
+            update = """
+            INSERT INTO sp_tokens (token, expires, chat_id) VALUES (?, ?, ?)
+            """
+        self._execute(update, (token, expires, chat_id))
+
     @staticmethod
     def sanitize(string):
         """
         Remove special characters from a string to make it suitable for SQL
         queries.
         """
+        if string is None:
+            return None
         if not isinstance(string, str):
             string = str(string)
         newstr = re.sub("'", "''", string)
