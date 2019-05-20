@@ -23,21 +23,9 @@ from bot import find
 from bot import unknown
 from bot import parse_config
 from bot import send_message
-
-
-class Infinite:
-    """
-    Dummy class that you can infinitely dot-walk.
-    """
-
-    def __getattr__(self, attr):
-        return Infinite()
-
-
-class Nothing:
-    """
-    Empty class to add arbitrary attributes to.
-    """
+from conftest import Infinite
+from conftest import Nothing
+from conftest import FakeDB
 
 
 @pytest.fixture
@@ -63,14 +51,6 @@ def test_start(monkeypatch, message_buffer):
         tmpfile.file.flush()
         start(Infinite(), Infinite())
     assert message_buffer[0] == 'hello world'
-
-
-class FakeDB:
-    def __init__(self, last_res=None):
-        self._last_res = last_res
-
-    def get_last_res(self, _):
-        return self._last_res
 
 
 fake_res = dict(

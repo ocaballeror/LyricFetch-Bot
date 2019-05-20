@@ -4,6 +4,8 @@ import pytest
 import sqlite3
 from lyricfetch import Song
 
+from conftest import Nothing
+
 
 def test_config(database):
     assert database._connection
@@ -58,16 +60,12 @@ def test_execute_connection_retries(database):
         database._execute(select)
 
 
-class Empty:
-    pass
-
-
 def test_log_result(database):
     chat_id = 'chat_id'
     song = Song('lucis absentia', 'gehenna gate')
-    source = Empty()
+    source = Nothing()
     source.__name__ = 'source'
-    result = Empty()
+    result = Nothing()
     result.song = song
     result.source = source
 
