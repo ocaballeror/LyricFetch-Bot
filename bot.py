@@ -216,7 +216,7 @@ def get_song_from_string(song, chat_id):
     Parse the user's input and return a song object from it.
     """
     if not song:
-        return song
+        return None
     if isinstance(song, Song):
         return song
 
