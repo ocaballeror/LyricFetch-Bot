@@ -149,7 +149,9 @@ class DB:
 
         Returns None if the chat_id is not in the database.
         """
-        select = "SELECT token, refresh, expires FROM sp_tokens WHERE chat_id=?"
+        select = """
+        SELECT token, refresh, expires FROM sp_tokens WHERE chat_id=?
+        """
         res = self._execute(select, [chat_id])
         return res
 
@@ -160,11 +162,13 @@ class DB:
         select = "SELECT chat_id FROM sp_tokens WHERE chat_id=?"
         exists = self._execute(select, [chat_id])
         if exists:
-            update = "UPDATE sp_tokens SET token=?, refresh=?, expires=? WHERE chat_id=?"
+            update = """
+            UPDATE sp_tokens SET token=?, refresh=?, expires=? WHERE chat_id=?
+            """
         else:
             update = """
-            INSERT INTO sp_tokens (token, refresh, expires, chat_id) VALUES (?,
-            ?, ?, ?)
+            INSERT INTO sp_tokens (token, refresh, expires, chat_id)
+            VALUES (?, ?, ?, ?)
             """
         self._execute(update, (token, refresh, expires, chat_id))
 
