@@ -51,6 +51,7 @@ class DB:
             CREATE TABLE IF NOT EXISTS sp_tokens(
                 chat_id VARCHAR(9) NOT NULL,
                 token VARCHAR(512),
+                refresh VARCHAR(512),
                 expires INT,
                 CONSTRAINT PK_sp_tokens PRIMARY KEY (chat_id)
             )"""
@@ -148,23 +149,24 @@ class DB:
 
         Returns None if the chat_id is not in the database.
         """
-        select = "SELECT token, expires FROM sp_tokens WHERE chat_id=?"
+        select = "SELECT token, refresh, expires FROM sp_tokens WHERE chat_id=?"
         res = self._execute(select, [chat_id])
         return res
 
-    def save_sp_token(self, token, chat_id, expires=None):
+    def save_sp_token(self, token, chat_id, refresh=None, expires=None):
         """
         Save the token for a chat_id.
         """
         select = "SELECT chat_id FROM sp_tokens WHERE chat_id=?"
         exists = self._execute(select, [chat_id])
         if exists:
-            update = "UPDATE sp_tokens SET token=?, expires=? WHERE chat_id=?"
+            update = "UPDATE sp_tokens SET token=?, refresh=?, expires=? WHERE chat_id=?"
         else:
             update = """
-            INSERT INTO sp_tokens (token, expires, chat_id) VALUES (?, ?, ?)
+            INSERT INTO sp_tokens (token, refresh, expires, chat_id) VALUES (?,
+            ?, ?, ?)
             """
-        self._execute(update, (token, expires, chat_id))
+        self._execute(update, (token, refresh, expires, chat_id))
 
     @staticmethod
     def sanitize(string):

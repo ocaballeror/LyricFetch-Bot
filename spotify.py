@@ -82,7 +82,7 @@ class Spotify:
         """
         token_info = self.sp_oauth.get_access_token(code)
         print(token_info)
-        return token_info['access_token'], token_info['expires_at']
+        return token_info
 
     def refresh_access_token(self, token):
         return self.sp_oauth.refresh_access_token(token)

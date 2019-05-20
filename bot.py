@@ -138,9 +138,14 @@ def get_sp_token(chat_id):
         return None
 
     if token['expires'] and int(token['expires']) < time.time():
+        logger.info('Refreshing access token')
         token = SP.refresh_access_token(token['token'])
+        logger.debug(token)
         DB.save_sp_token(
-            token['token_info'], chat_id=chat_id, expires=token['expires']
+            token['access_token'],
+            chat_id=chat_id,
+            refresh=token['refresh_token'],
+            expires=token['expires_at'],
         )
     return token['token']
 
@@ -162,8 +167,14 @@ def now(bot, update):
                 break
             time.sleep(1)
 
-        token, expires = SP.get_access_token(token['token'])
-        DB.save_sp_token(token, chat_id, expires=expires)
+        token = SP.get_access_token(token['token'])
+        DB.save_sp_token(
+            token['access_token'],
+            chat_id,
+            expires=token['expires_at'],
+            refresh=token['refresh_token'],
+        )
+        token = token['access_token']
     current = SP.currently_playing(token)
     if not current:
         send('There is nothing playing!')
