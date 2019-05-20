@@ -139,7 +139,7 @@ def get_sp_token(chat_id):
 
     if token['expires'] and int(token['expires']) < time.time():
         logger.info('Refreshing access token')
-        token = SP.refresh_access_token(token['token'])
+        token = SP.refresh_access_token(token['refresh'])
         logger.debug(token)
         DB.save_sp_token(
             token['access_token'],
@@ -147,6 +147,7 @@ def get_sp_token(chat_id):
             refresh=token['refresh_token'],
             expires=token['expires_at'],
         )
+        token['token'] = token['access_token']
     return token['token']
 
 
