@@ -38,6 +38,8 @@ def test_capwords(words, expect):
 @pytest.mark.parametrize(
     'name,expect',
     [
+        ('äéìôçñ', 'aeiocn'),
+        ('Mjölner, Hammer of Thor', 'mjolner hammer of thor'),
         ('Zero Tolerance - Demo', 'zero tolerance'),
         ('Zombie Ritual - Live in Germany April 13th 1993', 'Unknown'),
         ('Hit The Lights - Remastered', 'hit the lights'),

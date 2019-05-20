@@ -1,5 +1,6 @@
 import re
 import string
+import unidecode
 
 INVALID = {
     'name': [r'\(?live( (at|@|from|in)[^)]*)?\)?'],
@@ -111,11 +112,13 @@ def process(value, key, invalid=True, junk=True):
     value = value.lower()
     if invalid and is_value_invalid(value, key):
         return 'Unknown'
+
     junk = JUNK[key] if junk else []
     replace = JUNK['all'].copy()
-
     for delete in junk:
         replace[delete] = ''
+
+    value = unidecode.unidecode(value)
     for regex, sub in replace.items():
         old_value = value
         value = re.sub(regex, sub, value, flags=re.IGNORECASE)
