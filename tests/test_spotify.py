@@ -1,20 +1,13 @@
 import sys
-import os
-import json
 import pickle
 from datetime import date
 
-import pytest
 import requests
 import spotipy
 from lyricfetch import Song
 
 sys.path.append('.')
-from bot import CONFFILE
 import spotify
-from spotify import _set_release_date
-from spotify import Spotify
-
 
 def test_set_release_date():
     expect = date(2019, 1, 1)
@@ -30,26 +23,6 @@ def test_set_release_date():
     album = {'release_date': '2019-01-01', 'release_date_precision': 'day'}
     _set_release_date(album)
     assert album['release_date'] == expect
-
-
-@pytest.fixture(scope='session')
-def sp_client():
-    if not os.path.isfile(CONFFILE):
-        pytest.skip('No spotify config found')
-
-    with open(CONFFILE) as f:
-        config = json.load(f)
-
-    client, secret = (
-        config.get("SPOTIFY_CLIENT_ID", ''),
-        config.get("SPOTIFY_CLIENT_SECRET", ''),
-    )
-    if not client or not secret:
-        pytest.skip('Spotify keys not found in config')
-    sp = Spotify()
-    sp.discography_cache.clear()
-    sp.configure(client, secret)
-    return sp
 
 
 def test_spotify_init(sp_client):
