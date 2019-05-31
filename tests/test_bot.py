@@ -9,7 +9,6 @@ import pytest
 import telegram
 import lyricfetch
 from lyricfetch import Song
-from lyricfetch.scraping import id_source
 
 sys.path.append('.')
 from bot import next_song
