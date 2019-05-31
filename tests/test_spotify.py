@@ -5,6 +5,8 @@ import pickle
 from datetime import date
 
 import pytest
+import requests
+import spotipy
 from lyricfetch import Song
 
 sys.path.append('.')
@@ -221,3 +223,57 @@ def test_spotify_get_album_tracks_album(sp_client, monkeypatch):
         song.artist: {song.album: {'tracks': song_list}}
     }
     assert song_list == sp_client.get_album_tracks(song)
+
+
+def test_spotify_get_auth_url(sp_client):
+    """
+    Check that the auth url is accessible and contains the chat_id.
+    """
+    chat_id = '12345-67890'
+    url = sp_client.get_auth_url(chat_id)
+    assert chat_id in url
+    requests.get(url).raise_for_status()
+
+
+def test_spotify_currently_playing(monkeypatch, sp_client):
+    response = {
+        'timestamp': 1559294488309,
+        'progress_ms': 16268,
+        'item': {
+            'album': {
+                'album_type': 'album',
+                'artists': [
+                    {
+                        'name': 'Rise Against',
+                        'type': 'artist',
+                        'uri': 'spotify:artist:6Wr3hh341P84m3EI8qdn9O',
+                    }
+                ],
+                'name': 'The Sufferer & The Witness',
+            },
+            'artists': [
+                {
+                    'name': 'Rise Against',
+                    'type': 'artist',
+                    'uri': 'spotify:artist:6Wr3hh341P84m3EI8qdn9O',
+                }
+            ],
+            'duration_ms': 201026,
+            'id': '2YJvYVpOF8Z9Yf8QHpOMsz',
+            'name': 'Roadside',
+            'popularity': 41,
+            'type': 'track',
+            'uri': 'spotify:track:2YJvYVpOF8Z9Yf8QHpOMsz',
+        },
+        'currently_playing_type': 'track',
+        'actions': {'disallows': {'resuming': True}},
+        'is_playing': True,
+    }
+
+    class Client(spotipy.Spotify):
+        def currently_playing(self):
+            return response
+
+    monkeypatch.setattr(spotify.spotipy, 'Spotify', Client)
+    expect = Song('Rise Against', 'Roadside', 'The Sufferer & The Witness')
+    assert sp_client.currently_playing(token='some token') == expect
