@@ -24,34 +24,50 @@ from bot import find
 from bot import unknown
 from bot import parse_config
 from bot import send_message
-from conftest import Infinite
 from conftest import Nothing
 from conftest import FakeDB
 
 
+class FakeBot:
+    def __init__(self):
+        self.msg_log = []
+        self.call_log = []
+
+    def send_message(self, *args, **kwargs):
+        text = kwargs['text']
+        if text == 'raise error':
+            raise_telegram_error()
+        self.msg_log.append(text)
+
+    def log_call(self, *args, **kwargs):
+        self.call_log.append((*args, *kwargs.values()))
+
+    def send_chat_action(self, *args, **kwargs):
+        self.log_call(*args, **kwargs)
+
+
 @pytest.fixture
-def message_buffer(monkeypatch):
-    """
-    Mock the bot's send_message function and replace it with one that just
-    appends everything to a list. This list is returned so that the test can
-    check its contents.
-    """
-    buffer = []
-
-    def append_message(*args, **kwargs):
-        buffer.append(args[0])
-
-    monkeypatch.setattr(bot, 'send_message', append_message)
-    return buffer
+def bot_arg():
+    bot_arg = FakeBot()
+    return bot_arg
 
 
-def test_start(monkeypatch, message_buffer):
+@pytest.fixture
+def update():
+    update_arg = Nothing()
+    update_arg.message = Nothing()
+    update_arg.message.chat_id = 'chat_id'
+    update_arg.message.text = 'message text'
+    return update_arg
+
+
+def test_start(monkeypatch, bot_arg, update):
     with NamedTemporaryFile(mode='w+') as tmpfile:
         monkeypatch.setattr(bot, 'HELPFILE', tmpfile.name)
         tmpfile.file.write('hello world')
         tmpfile.file.flush()
-        start(Infinite(), Infinite())
-    assert message_buffer[0] == 'hello world'
+        start(bot_arg, update)
+    assert bot_arg.msg_log[0] == 'hello world'
 
 
 fake_res = dict(
@@ -171,7 +187,7 @@ def test_next_song_existing(monkeypatch):
     assert _get_next_song(1) == f'Searching for {song_next}'
 
 
-def test_next_song(monkeypatch, message_buffer):
+def test_next_song(monkeypatch, bot_arg, update):
     """
     Test the next_song function, in a similar manner to _get_next_song.
     """
@@ -181,36 +197,35 @@ def test_next_song(monkeypatch, message_buffer):
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
     monkeypatch.setattr(bot, 'get_lyrics', lambda s, c: f'Searching for {s}')
 
-    update = Infinite()
-    next_song(1, update)
-    assert message_buffer[0] == f'Searching for {song_next}'
+    next_song(bot_arg, update)
+    assert bot_arg.msg_log[0] == f'Searching for {song_next}'
 
 
-def test_other_no_lastres(monkeypatch, message_buffer):
+def test_other_no_lastres(monkeypatch, bot_arg, update):
     """
     Test the 'other' function when there is no last result.
     """
     monkeypatch.setattr(bot, 'DB', FakeDB(None))
-    other(Infinite(), Infinite())
+    other(bot_arg, update)
 
     expect = "You haven't searched for anything yet"
-    assert message_buffer[0] == expect
+    assert bot_arg.msg_log[0] == expect
 
 
-def test_other_dberror(monkeypatch, message_buffer):
+def test_other_dberror(monkeypatch, bot_arg, update):
     """
     Test the 'other' function when a database error is thrown.
     """
     f = FakeDB()
     f.get_last_res = raise_sqlite_error
     monkeypatch.setattr(bot, 'DB', f)
-    other(Infinite(), Infinite())
+    other(bot_arg, update)
 
     expect = "There was an error"
-    assert message_buffer[0].startswith(expect)
+    assert bot_arg.msg_log[0].startswith(expect)
 
 
-def test_other_no_sources(monkeypatch, message_buffer):
+def test_other_no_sources(monkeypatch, bot_arg, update):
     """
     Test the 'other' function when there are no sources left to search.
     """
@@ -219,11 +234,11 @@ def test_other_no_sources(monkeypatch, message_buffer):
     fakedb = FakeDB(res)
     monkeypatch.setattr(bot, 'DB', fakedb)
 
-    other(Infinite(), Infinite())
-    assert 'No other sources' in message_buffer[0]
+    other(bot_arg, update)
+    assert 'No other sources' in bot_arg.msg_log[0]
 
 
-def test_other(monkeypatch, message_buffer):
+def test_other(monkeypatch, bot_arg, update):
     """
     Test the 'other' function.
     """
@@ -237,8 +252,8 @@ def test_other(monkeypatch, message_buffer):
     monkeypatch.setattr(bot, 'DB', fakedb)
     monkeypatch.setattr(bot, 'get_lyrics', fake_get_lyrics)
 
-    other(Infinite(), Infinite())
-    msg = message_buffer[0]
+    other(bot_arg, update)
+    msg = bot_arg.msg_log[0]
     assert repr(song) in msg
     assert scraping_func not in msg
 
@@ -342,39 +357,29 @@ def test_get_lyrics_found(monkeypatch, database):
     assert database.get_last_res(1)
 
 
-def test_find(monkeypatch, message_buffer):
+def test_find(monkeypatch, bot_arg, update):
     """
     Test the 'find' function.
     """
-    call_log = []
-
-    def log_call(*args, **kwargs):
-        call_log.append((*args, *kwargs.values()))
 
     def fake_getlyrics(*args, **kwargs):
-        log_call(*args, **kwargs)
+        bot_arg.log_call(*args, **kwargs)
         return 'here are your lyrics'
 
-    update = Nothing()
-    update.message = Nothing()
-    update.message.chat_id = 1
-    update.message.text = 'message text'
-    bot_arg = Nothing()
-    bot_arg.send_chat_action = log_call
     monkeypatch.setattr(bot, 'get_lyrics', fake_getlyrics)
 
     find(bot_arg, update)
-    assert call_log[0] == (1, telegram.ChatAction.TYPING)
-    assert call_log[1] == ('message text', 1)
-    assert message_buffer[0] == 'here are your lyrics'
+    assert bot_arg.call_log[0] == ('chat_id', telegram.ChatAction.TYPING)
+    assert bot_arg.call_log[1] == ('message text', 'chat_id')
+    assert bot_arg.msg_log[0] == 'here are your lyrics'
 
 
-def test_unknown(message_buffer):
+def test_unknown(bot_arg, update):
     """
     Test the 'unknown' function.
     """
-    unknown(Infinite(), Infinite())
-    assert "didn't understand that" in message_buffer[0]
+    unknown(bot_arg, update)
+    assert "didn't understand that" in bot_arg.msg_log[0]
 
 
 @pytest.mark.parametrize(
@@ -401,59 +406,43 @@ def test_parse_config(monkeypatch):
     assert data == content
 
 
-@pytest.fixture
-def bot_send():
-    messages = []
-
-    def append_msg(*args, **kwargs):
-        text = kwargs['text']
-        if text == 'raise error':
-            raise_telegram_error()
-        messages.append(text)
-
-    bot_arg = Nothing()
-    bot_arg.send_message = append_msg
-    bot_arg.messages = messages
-    return bot_arg
-
-
-def test_send_message_error(bot_send, monkeypatch, caplog):
+def test_send_message_error(bot_arg, monkeypatch, caplog):
     msg = 'raise error'
-    send_message(msg, bot_send, 1)
-    assert bot_send.messages[0] == 'Unknown error'
+    send_message(msg, bot_arg, 1)
+    assert bot_arg.msg_log[0] == 'Unknown error'
     assert len(caplog.records) == 1
     assert 'mock telegram error' in caplog.text
 
 
-def test_send_message_fitting(bot_send):
+def test_send_message_fitting(bot_arg):
     """
     Test sending a message that is shorter than the maximum allowed by
     telegram.
     """
     msg = 'hello world'
-    send_message(msg, bot_send, 1)
-    assert bot_send.messages[0] == msg
+    send_message(msg, bot_arg, 1)
+    assert bot_arg.msg_log[0] == msg
 
 
-def test_send_message_not_fitting(bot_send, monkeypatch):
+def test_send_message_not_fitting(bot_arg, monkeypatch):
     """
     Test sending a message that is longer than the maximum allowed by
     telegram.
     """
     monkeypatch.setattr(telegram.constants, 'MAX_MESSAGE_LENGTH', 5)
     msg = 'helloworld'
-    send_message(msg, bot_send, 1)
-    assert bot_send.messages[0] == 'hello'
-    assert bot_send.messages[1] == 'world'
+    send_message(msg, bot_arg, 1)
+    assert bot_arg.msg_log[0] == 'hello'
+    assert bot_arg.msg_log[1] == 'world'
 
 
-def test_send_message_not_fitting_parragraphs(bot_send, monkeypatch):
+def test_send_message_not_fitting_parragraphs(bot_arg, monkeypatch):
     """
     Test sending a message that is longer than the maximum allowed by
     telegram, and check that the returned messages are split by parragraph.
     """
     monkeypatch.setattr(telegram.constants, 'MAX_MESSAGE_LENGTH', 20)
     msg = 'hello\n\nworld, this is a message'
-    send_message(msg, bot_send, 1)
-    assert bot_send.messages[0] == 'hello'
-    assert bot_send.messages[1].strip() == 'world, this is a message'
+    send_message(msg, bot_arg, 1)
+    assert bot_arg.msg_log[0] == 'hello'
+    assert bot_arg.msg_log[1].strip() == 'world, this is a message'
