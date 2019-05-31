@@ -25,6 +25,7 @@ from bot import Database
 
 import bot as bot_module
 
+
 @pytest.fixture
 def bot(monkeypatch, database, sp_client):
     monkeypatch.setattr(bot_module, 'DB', database)
