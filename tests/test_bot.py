@@ -14,6 +14,7 @@ import bot
 from bot import start
 from bot import _get_next_song
 from bot import next_song
+from bot import get_album_tracks
 from bot import get_album_tracks_lastfm
 from bot import other
 from bot import get_song_from_string
@@ -83,6 +84,34 @@ def test_album_tracks_lastfm(monkeypatch):
     tracks = '\n'.join(tracks)
     assert 'carolus rex' in tracks
     assert 'en livstid i krig' in tracks
+
+
+def test_album_tracks_lastfm_notfound(monkeypatch):
+    """
+    Test get_album_tracks_lastfm when the album isn't found in the lastfm
+    database.
+    """
+
+    def get_lastfm(*args, **kwargs):
+        return []
+
+    song = Song('Horrendous', 'The Idolater', album='Idol')
+    monkeypatch.setattr(bot, 'get_lastfm', get_lastfm)
+    assert get_album_tracks_lastfm(song) == []
+
+
+def test_album_tracks(monkeypatch):
+    """
+    Check that bot.get_album_tracks() searches spotify first, and uses lastfm
+    as a fallback.
+    """
+    song = Song('wintersun', 'beyond the dark sun')
+    monkeypatch.setattr(bot.SP, 'get_album_tracks', lambda x: [])
+    monkeypatch.setattr(bot, 'get_album_tracks_lastfm', lambda x: ['lastfm'])
+    assert get_album_tracks(song)[0] == 'lastfm'
+
+    monkeypatch.setattr(bot.SP, 'get_album_tracks', lambda x: ['spotify'])
+    assert get_album_tracks(song)[0] == 'spotify'
 
 
 def test_next_song_no_last(monkeypatch):
