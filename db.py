@@ -33,29 +33,9 @@ class DB:
             self._filename = filename
         self._connection = sqlite3.connect(self._filename)
         self._connection.row_factory = row_factory
-        self._execute(
-            """
-            CREATE TABLE IF NOT EXISTS log(
-                chat_id VARCHAR(9),
-                source VARCHAR(64),
-                artist VARCHAR(64),
-                title VARCHAR (128),
-                album VARCHAR (128) default 'unknown',
-                date float,
-                CONSTRAINT PK_log PRIMARY KEY (chat_id,artist,title)
-            )"""
-        )
-        self._connection.commit()
-        self._execute(
-            """
-            CREATE TABLE IF NOT EXISTS sp_tokens(
-                chat_id VARCHAR(9) NOT NULL,
-                token VARCHAR(512),
-                refresh VARCHAR(512),
-                expires INT,
-                CONSTRAINT PK_sp_tokens PRIMARY KEY (chat_id)
-            )"""
-        )
+        cursor = self._connection.cursor()
+        with open('schema.sql') as schema:
+            cursor.executescript(schema.read())
         self._connection.commit()
         self._closed = False
 
