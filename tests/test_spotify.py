@@ -8,6 +8,8 @@ from lyricfetch import Song
 
 sys.path.append('.')
 import spotify
+from spotify import _set_release_date
+
 
 def test_set_release_date():
     expect = date(2019, 1, 1)
