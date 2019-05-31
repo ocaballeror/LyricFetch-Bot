@@ -1,7 +1,9 @@
 import sys
 import json
+import time
 import sqlite3
 from tempfile import NamedTemporaryFile
+from threading import Thread
 
 import pytest
 import telegram
@@ -371,6 +373,42 @@ def test_unknown(bot_arg, update):
     """
     unknown(bot_arg, update)
     assert "didn't understand that" in bot_arg.msg_log[0]
+
+
+def test_now(bot, monkeypatch, bot_arg, update):
+    """
+    Test the 'now' function.
+    """
+    print('all', bot.DB._execute('select * from sp_tokens'))
+    chat_id = update.message.chat_id
+    token = 'token'
+
+    def save_token():
+        time.sleep(1)
+        database = Database()
+        database.config(bot.DB._filename)
+        database.save_sp_token(token, chat_id)
+
+    access_token = {
+        'access_token': token + '2',
+        'expires_at': (time.time() + 100),
+        'refresh_token': token + '_refresh',
+    }
+    monkeypatch.setattr(bot.SP, 'get_access_token', lambda x: access_token)
+
+    Thread(target=save_token).start()
+    monkeypatch.setattr(bot.SP, 'currently_playing', lambda x: None)
+    bot.now(bot_arg, update)
+    assert bot_arg.msg_log[0] == 'Please open this link to log in to Spotify'
+    assert bot_arg.msg_log[1] == bot.SP.get_auth_url(chat_id)
+    assert bot_arg.msg_log[2] == 'There is nothing playing!'
+
+    song = Song('Orphaned land', 'ornaments of gold')
+    lyrics = 'The light of the dark is the morning of the dawn'
+    monkeypatch.setattr(bot.SP, 'currently_playing', lambda x: song)
+    monkeypatch.setattr(bot, 'get_lyrics', lambda x, y: lyrics)
+    bot.now(bot_arg, update)
+    assert bot_arg.msg_log[3] == lyrics
 
 
 @pytest.mark.parametrize(
