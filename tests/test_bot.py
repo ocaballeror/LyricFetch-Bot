@@ -10,22 +10,25 @@ from lyricfetch import Song
 from lyricfetch.scraping import id_source
 
 sys.path.append('.')
-import bot
-from bot import start
-from bot import _get_next_song
 from bot import next_song
 from bot import get_album_tracks
-from bot import get_album_tracks_lastfm
 from bot import other
 from bot import get_song_from_string
-from bot import log_result
 from bot import get_lyrics
-from bot import find
 from bot import unknown
 from bot import parse_config
 from bot import send_message
 from conftest import Nothing
-from conftest import FakeDB
+from bot import Database
+
+
+import bot as bot_module
+
+@pytest.fixture
+def bot(monkeypatch, database, sp_client):
+    monkeypatch.setattr(bot_module, 'DB', database)
+    monkeypatch.setattr(bot_module, 'SP', sp_client)
+    yield bot_module
 
 
 class FakeBot:
@@ -61,20 +64,27 @@ def update():
     return update_arg
 
 
-def test_start(monkeypatch, bot_arg, update):
+def test_start(monkeypatch, bot, bot_arg, update):
     with NamedTemporaryFile(mode='w+') as tmpfile:
         monkeypatch.setattr(bot, 'HELPFILE', tmpfile.name)
         tmpfile.file.write('hello world')
         tmpfile.file.flush()
-        start(bot_arg, update)
+        bot.start(bot_arg, update)
     assert bot_arg.msg_log[0] == 'hello world'
 
 
+fake_log = Nothing(
+    song=Song(
+        artist='slugdge', title='putrid fairytale', album='esoteric malacology'
+    ),
+    source=lyricfetch.sources[0],
+)
+
 fake_res = dict(
-    artist='slugdge',
-    title='putrid fairytale',
-    album='esoteric malacology',
-    source=lyricfetch.sources[0].__name__,
+    artist=fake_log.song.artist,
+    title=fake_log.song.title,
+    album=fake_log.song.album,
+    source=fake_log.source.__name__,
 )
 
 
@@ -86,7 +96,7 @@ def raise_telegram_error(*args, **kwargs):
     raise telegram.TelegramError('mock telegram error')
 
 
-def test_album_tracks_lastfm(monkeypatch):
+def test_album_tracks_lastfm(monkeypatch, bot):
     """
     Test the get_album_tracks_lastfm function.
     """
@@ -94,15 +104,15 @@ def test_album_tracks_lastfm(monkeypatch):
     with monkeypatch.context() as mkp:
         # An empty list should be returned if we can't find the album's name
         mkp.setattr(song, 'fetch_album_name', lambda: None)
-        assert get_album_tracks_lastfm(song) == []
+        assert bot.get_album_tracks_lastfm(song) == []
 
-    tracks = get_album_tracks_lastfm(song)
+    tracks = bot.get_album_tracks_lastfm(song)
     tracks = '\n'.join(tracks)
     assert 'carolus rex' in tracks
     assert 'en livstid i krig' in tracks
 
 
-def test_album_tracks_lastfm_notfound(monkeypatch):
+def test_album_tracks_lastfm_notfound(bot, monkeypatch):
     """
     Test get_album_tracks_lastfm when the album isn't found in the lastfm
     database.
@@ -113,10 +123,10 @@ def test_album_tracks_lastfm_notfound(monkeypatch):
 
     song = Song('Horrendous', 'The Idolater', album='Idol')
     monkeypatch.setattr(bot, 'get_lastfm', get_lastfm)
-    assert get_album_tracks_lastfm(song) == []
+    assert bot.get_album_tracks_lastfm(song) == []
 
 
-def test_album_tracks(monkeypatch):
+def test_album_tracks(bot, monkeypatch):
     """
     Check that bot.get_album_tracks() searches spotify first, and uses lastfm
     as a fallback.
@@ -124,18 +134,17 @@ def test_album_tracks(monkeypatch):
     song = Song('wintersun', 'beyond the dark sun')
     monkeypatch.setattr(bot.SP, 'get_album_tracks', lambda x: [])
     monkeypatch.setattr(bot, 'get_album_tracks_lastfm', lambda x: ['lastfm'])
-    assert get_album_tracks(song)[0] == 'lastfm'
+    assert bot.get_album_tracks(song)[0] == 'lastfm'
 
     monkeypatch.setattr(bot.SP, 'get_album_tracks', lambda x: ['spotify'])
     assert get_album_tracks(song)[0] == 'spotify'
 
 
-def test_next_song_no_last(monkeypatch):
+def test_next_song_no_last(bot):
     """
     Test get the next song when there is no "last result".
     """
-    monkeypatch.setattr(bot, 'DB', FakeDB(None))
-    assert _get_next_song(1) == "You haven't searched for anything yet"
+    assert bot._get_next_song(1) == "You haven't searched for anything yet"
 
 
 @pytest.mark.parametrize(
@@ -153,47 +162,45 @@ def test_next_song_no_last(monkeypatch):
         'Last song on the album',
     ],
 )
-def test_next_song_no_album(tracks, expect, monkeypatch):
+def test_next_song_no_album(monkeypatch, tracks, expect, bot):
     """
     Test the _get_next_song function when we can't find the name of the next
     song.
     """
-    monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
+    bot.log_result('chat_id', fake_log)
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
-    assert _get_next_song(1) == expect
+    assert bot._get_next_song('chat_id') == expect
 
 
-def test_next_song_dberror(monkeypatch):
+def test_next_song_dberror(bot):
     """
     Test get the last song when a database error is thrown.
     """
-    f = FakeDB()
-    f.get_last_res = raise_sqlite_error
-    monkeypatch.setattr(bot, 'DB', f)
-    assert _get_next_song(1).startswith('There was an error while')
+    bot.DB.get_last_res = raise_sqlite_error
+    assert bot._get_next_song(1).startswith('There was an error while')
 
 
-def test_next_song_existing(monkeypatch):
+def test_next_song_existing(bot, monkeypatch):
     """
     Test the _get_next_song existing when everything goes smoothly and the next
     song is found.
     """
     tracks = [fake_res['title'], 'war squids']
     song_next = Song(fake_res['artist'], 'war squids', fake_res['album'])
-    monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
+    bot.log_result('chat_id', fake_log)
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
     monkeypatch.setattr(bot, 'get_lyrics', lambda s, c: f'Searching for {s}')
 
-    assert _get_next_song(1) == f'Searching for {song_next}'
+    assert bot._get_next_song('chat_id') == f'Searching for {song_next}'
 
 
-def test_next_song(monkeypatch, bot_arg, update):
+def test_next_song(monkeypatch, bot, bot_arg, update):
     """
     Test the next_song function, in a similar manner to _get_next_song.
     """
     tracks = [fake_res['title'], 'crop killer']
     song_next = Song(fake_res['artist'], 'crop killer', fake_res['album'])
-    monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
+    bot.log_result('chat_id', fake_log)
     monkeypatch.setattr(bot, 'get_album_tracks', lambda x: tracks)
     monkeypatch.setattr(bot, 'get_lyrics', lambda s, c: f'Searching for {s}')
 
@@ -201,44 +208,39 @@ def test_next_song(monkeypatch, bot_arg, update):
     assert bot_arg.msg_log[0] == f'Searching for {song_next}'
 
 
-def test_other_no_lastres(monkeypatch, bot_arg, update):
+def test_other_no_lastres(bot, bot_arg, update):
     """
     Test the 'other' function when there is no last result.
     """
-    monkeypatch.setattr(bot, 'DB', FakeDB(None))
     other(bot_arg, update)
 
     expect = "You haven't searched for anything yet"
     assert bot_arg.msg_log[0] == expect
 
 
-def test_other_dberror(monkeypatch, bot_arg, update):
+def test_other_dberror(monkeypatch, bot, bot_arg, update):
     """
     Test the 'other' function when a database error is thrown.
     """
-    f = FakeDB()
-    f.get_last_res = raise_sqlite_error
-    monkeypatch.setattr(bot, 'DB', f)
+    monkeypatch.setattr(bot.DB, 'get_last_res', raise_sqlite_error)
     other(bot_arg, update)
 
     expect = "There was an error"
     assert bot_arg.msg_log[0].startswith(expect)
 
 
-def test_other_no_sources(monkeypatch, bot_arg, update):
+def test_other_no_sources(monkeypatch, bot, bot_arg, update):
     """
     Test the 'other' function when there are no sources left to search.
     """
-    res = fake_res.copy()
-    res['source'] = lyricfetch.sources[-1].__name__
-    fakedb = FakeDB(res)
-    monkeypatch.setattr(bot, 'DB', fakedb)
+    monkeypatch.setattr(fake_log, 'source', lyricfetch.sources[-1])
+    bot.log_result('chat_id', fake_log)
 
     other(bot_arg, update)
     assert 'No other sources' in bot_arg.msg_log[0]
 
 
-def test_other(monkeypatch, bot_arg, update):
+def test_other(monkeypatch, bot, bot_arg, update):
     """
     Test the 'other' function.
     """
@@ -246,16 +248,13 @@ def test_other(monkeypatch, bot_arg, update):
     def fake_get_lyrics(*args):
         return str(args)
 
-    scraping_func = lyricfetch.sources[0].__name__
-    song = Song(fake_res['artist'], fake_res['title'], fake_res['album'])
-    fakedb = FakeDB(fake_res)
-    monkeypatch.setattr(bot, 'DB', fakedb)
+    bot.log_result('chat_id', fake_log)
     monkeypatch.setattr(bot, 'get_lyrics', fake_get_lyrics)
 
     other(bot_arg, update)
     msg = bot_arg.msg_log[0]
-    assert repr(song) in msg
-    assert scraping_func not in msg
+    assert repr(fake_log.song) in msg
+    assert fake_log.source.__name__ not in msg
 
 
 def test_get_song_from_string():
@@ -265,21 +264,20 @@ def test_get_song_from_string():
     assert get_song_from_string(song, None) == song
 
 
-def test_get_song_from_string_lastres(monkeypatch):
+def test_get_song_from_string_lastres(bot):
     """
     Test get a song from string when there is no hyphen and we must get the
     last result from the database.
     """
-    chat_id = 1
-    monkeypatch.setattr(bot, 'DB', FakeDB(None))
-    assert get_song_from_string('', chat_id) is None
+    chat_id = 'chat_id'
+    assert bot.get_song_from_string('', chat_id) is None
 
     song = Song(fake_res['artist'], 'the spectral burrows')
-    monkeypatch.setattr(bot, 'DB', FakeDB(fake_res))
+    bot.log_result(chat_id, fake_log)
     assert get_song_from_string('the spectral burrows', chat_id) == song
 
 
-def test_log_result(monkeypatch, caplog):
+def test_log_result(monkeypatch, bot, caplog):
     buffer = []
 
     def fake_log_result(*args):
@@ -287,25 +285,24 @@ def test_log_result(monkeypatch, caplog):
 
     monkeypatch.setattr(bot.DB, 'log_result', fake_log_result)
     args = (1, 'result')
-    log_result(*args)
+    bot.log_result(*args)
     assert buffer == [args]
 
     monkeypatch.setattr(bot.DB, 'log_result', raise_sqlite_error)
-    log_result(*args)
+    bot.log_result(*args)
     records = list(caplog.records)
     assert len(records) == 1
     assert 'sqlite3.error' in caplog.text.lower()
 
 
-def test_get_lyrics_invalid_format(monkeypatch, database):
+def test_get_lyrics_invalid_format(bot):
     """
     Call get_lyrics with an invalid song string.
     """
-    monkeypatch.setattr(bot, 'DB', database)
     assert get_lyrics('asdf', 1) == 'Invalid format!'
 
 
-def test_get_lyrics_notfound(monkeypatch):
+def test_get_lyrics_notfound(monkeypatch, bot):
     """
     Test get_lyrics when no lyrics are found.
     """
@@ -322,42 +319,36 @@ def test_get_lyrics_notfound(monkeypatch):
     result.source = 'hello'
     monkeypatch.setattr(bot, 'get_lyrics_threaded', lambda a, b: result)
 
-    msg = get_lyrics(song, 1)
+    msg = bot.get_lyrics(song, 1)
     assert_not_found(msg)
 
     result.source = None
     song.lyrics = 'hello'
-    msg = get_lyrics(song, 1)
+    msg = bot.get_lyrics(song, 1)
     assert_not_found(msg)
 
 
-def test_get_lyrics_error(monkeypatch, caplog):
+def test_get_lyrics_error(monkeypatch, bot, caplog):
     monkeypatch.setattr(bot, 'get_song_from_string', raise_sqlite_error)
-    msg = get_lyrics('', 1)
+    msg = bot.get_lyrics('', 1)
     assert msg == 'Unknown error'
     assert len(caplog.records) == 1
     assert 'sqlite3.Error' in caplog.text
 
 
-def test_get_lyrics_found(monkeypatch, database):
+def test_get_lyrics_found(monkeypatch, bot):
     song = Song('obituary', 'ten thousand ways to die', lyrics='lyrics')
-    result = Nothing()
-    result.source = lyricfetch.sources[0]
-    result.song = song
-    source_name = id_source(result.source, full=True).lower()
 
-    monkeypatch.setattr(bot, 'DB', database)
-    monkeypatch.setattr(bot, 'get_lyrics_threaded', lambda a, b: result)
-    msg = get_lyrics(song, 1)
-    msg = msg.lower()
-    assert source_name in msg
+    monkeypatch.setattr(bot, 'get_lyrics_threaded', lambda a, b: fake_log)
+    msg = bot.get_lyrics(song, 1).lower()
+    assert fake_res['source'].lower() in msg
     assert song.title in msg
     assert song.artist in msg
     assert song.lyrics in msg
-    assert database.get_last_res(1)
+    assert bot.DB.get_last_res(1)
 
 
-def test_find(monkeypatch, bot_arg, update):
+def test_find(monkeypatch, bot, bot_arg, update):
     """
     Test the 'find' function.
     """
@@ -368,7 +359,7 @@ def test_find(monkeypatch, bot_arg, update):
 
     monkeypatch.setattr(bot, 'get_lyrics', fake_getlyrics)
 
-    find(bot_arg, update)
+    bot.find(bot_arg, update)
     assert bot_arg.call_log[0] == ('chat_id', telegram.ChatAction.TYPING)
     assert bot_arg.call_log[1] == ('message text', 'chat_id')
     assert bot_arg.msg_log[0] == 'here are your lyrics'
@@ -387,7 +378,7 @@ def test_unknown(bot_arg, update):
     [{}, {'token': 'token'}, {'db_filename': 'filename'}],
     ids=['empty', 'no db filename', 'no token'],
 )
-def test_parse_config_missing_keys(content, monkeypatch):
+def test_parse_config_missing_keys(content, bot, monkeypatch):
     with NamedTemporaryFile(mode='w') as tmpfile:
         monkeypatch.setattr(bot, 'CONFFILE', tmpfile.name)
         json.dump(content, tmpfile.file)
@@ -396,7 +387,7 @@ def test_parse_config_missing_keys(content, monkeypatch):
             parse_config()
 
 
-def test_parse_config(monkeypatch):
+def test_parse_config(monkeypatch, bot):
     content = {'token': 'token', 'db_filename': 'filename'}
     with NamedTemporaryFile(mode='w') as tmpfile:
         monkeypatch.setattr(bot, 'CONFFILE', tmpfile.name)
