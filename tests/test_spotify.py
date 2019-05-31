@@ -50,6 +50,17 @@ def test_spotify_save_cache(sp_client, tmp_path, monkeypatch):
         assert load == cache
 
 
+def test_spotify_load_cache_inexistent(sp_client, tmp_path, monkeypatch):
+    """
+    Test loading spotify's cache when the expected file does not exist.
+    """
+    sp_client.discography_cache.clear()
+    monkeypatch.setattr(spotify, 'CACHE_DIR', tmp_path)
+    tmp_path.rmdir()
+    sp_client.load_cache()
+    assert sp_client.discography_cache == {}
+
+
 def test_spotify_load_cache(sp_client, tmp_path, monkeypatch):
     """
     Test loading spotify's cache.
