@@ -4,6 +4,7 @@ import time
 import sqlite3
 from tempfile import NamedTemporaryFile
 from threading import Thread
+from functools import partial
 
 import pytest
 import telegram
@@ -409,6 +410,22 @@ def test_now(bot, monkeypatch, bot_arg, update):
     monkeypatch.setattr(bot, 'get_lyrics', lambda x, y: lyrics)
     bot.now(bot_arg, update)
     assert bot_arg.msg_log[3] == lyrics
+
+
+def test_text(bot, bot_arg, update, monkeypatch):
+    """
+    Test the generic text command.
+    """
+    chat_id = update.message.chat_id
+    log_find = partial(bot_arg.log_call, source='find')
+    log_as_handler = partial(bot_arg.log_call, source='handler')
+
+    monkeypatch.setattr(bot, 'find', log_find)
+    bot.HANDLERS[chat_id].append(log_as_handler)
+    bot.text(bot_arg, update)
+    bot.text(bot_arg, update)
+    assert bot_arg.call_log[0] == (bot_arg, update, 'handler')
+    assert bot_arg.call_log[1] == (bot_arg, update, 'find')
 
 
 @pytest.mark.parametrize(
