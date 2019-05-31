@@ -48,3 +48,6 @@ class Nothing:
     """
     Empty class to add arbitrary attributes to.
     """
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
