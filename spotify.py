@@ -80,9 +80,7 @@ class Spotify:
         """
         Get an authorization token given a code from the redirect url.
         """
-        token_info = self.sp_oauth.get_access_token(code)
-        print(token_info)
-        return token_info
+        return self.sp_oauth.get_access_token(code)
 
     def refresh_access_token(self, token):
         return self.sp_oauth.refresh_access_token(token)
