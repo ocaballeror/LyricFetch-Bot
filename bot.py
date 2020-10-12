@@ -37,7 +37,7 @@ SP = Spotify()
 HANDLERS = defaultdict(list)
 
 
-def start(bot, update):
+def start(update, context):
     """
     Function to be called on /start commmand.
     """
@@ -49,7 +49,7 @@ def start(bot, update):
     except Exception as error:
         logger.exception(error)
 
-    send_message(intro, bot, update.message.chat_id)
+    send_message(intro, context.bot, update.message.chat_id)
 
 
 def get_album_tracks_spotify(song):
@@ -121,12 +121,12 @@ def _get_next_song(chat_id):
     return msg
 
 
-def next_song(bot, update):
+def next_song(update, context):
     """
     Get lyrics for the next song in the album.
     """
     msg = _get_next_song(update.message.chat_id)
-    send_message(msg, bot, update.message.chat_id)
+    send_message(msg, context.bot, update.message.chat_id)
 
 
 def get_sp_token(chat_id):
@@ -151,12 +151,12 @@ def get_sp_token(chat_id):
     return token['token']
 
 
-def now(bot, update):
+def now(update, context):
     """
     Search for the lyrics of the song that the user is playing on Spotify.
     """
     chat_id = update.message.chat_id
-    send = partial(send_message, bot=bot, chat_id=chat_id)
+    send = partial(send_message, bot=context.bot, chat_id=chat_id)
     token = get_sp_token(chat_id)
     if not token:
         auth_url = SP.get_auth_url(chat_id)
@@ -184,7 +184,7 @@ def now(bot, update):
         send(lyrics_str)
 
 
-def other(bot, update):
+def other(update, context):
     """
     Use a different source to find lyrics for the last searched song.
     """
@@ -208,7 +208,7 @@ def other(bot, update):
             "history. This command is unavailable for now."
         )
 
-    send_message(msg, bot, update.message.chat_id)
+    send_message(msg, context.bot, update.message.chat_id)
 
 
 def get_song_from_string(song, chat_id):
@@ -276,28 +276,29 @@ def get_lyrics(song, chat_id, sources=None):
     return msg
 
 
-def text(bot, update):
+def text(update, context):
     """
     Generic text input handler.
     """
     chat_id = update.message.chat_id
     if HANDLERS[chat_id]:
         handler = HANDLERS[chat_id].pop()
-        handler(bot, update)
+        handler(update, context)
         return
 
     # If there is no priority handler, call the default "find"
-    find(bot, update)
+    find(update, context)
 
 
-def find(bot, update):
+def find(update, context):
     """
     Find lyrics for a song.
     """
     chat_id = update.message.chat_id
+    bot = context.bot
     bot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.TYPING)
     lyrics_str = get_lyrics(update.message.text, chat_id)
-    send_message(lyrics_str, bot, chat_id)
+    send_message(lyrics_str, context.bot, chat_id)
 
 
 def send_message(msg, bot, chat_id, raw=False):
@@ -329,12 +330,14 @@ def send_message(msg, bot, chat_id, raw=False):
         send(text=msg)
 
 
-def unknown(bot, update):
+def unknown(update, context):
     """
     Fallback function for commands that don't match any of the known ones.
     """
     send_message(
-        "Sorry, I didn't understand that command", bot, update.message.chat_id
+        "Sorry, I didn't understand that command",
+        context.bot,
+        update.message.chat_id
     )
 
 
@@ -356,7 +359,7 @@ def main():
     if not config:
         return 1
 
-    updater = Updater(config['token'])
+    updater = Updater(config['token'], use_context=True)
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CommandHandler('other', other))
     updater.dispatcher.add_handler(CommandHandler('next', next_song))
