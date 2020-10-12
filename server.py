@@ -8,8 +8,9 @@ from db import DB
 
 
 class Server(Process):
-    def __init__(self, db_config, *args, **kwargs):
+    def __init__(self, db_config, port=7000, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.port = port
         self.db = DB()
         self.db.config(**db_config)
         self.app = Flask(__name__)
@@ -17,7 +18,7 @@ class Server(Process):
 
     def run(self):
         super().run()
-        self.app.run(host='0.0.0.0', port=7000, debug=False)
+        self.app.run(host='0.0.0.0', port=self.port, debug=False)
 
     def on_event(self):
         print(request)

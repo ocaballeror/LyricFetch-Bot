@@ -376,7 +376,10 @@ def main():
         logger.critical(str(error))
         return 2
 
-    server = Server(db_config=dict(filename=config['db_filename']))
+    server = Server(
+        db_config=dict(filename=config['db_filename']),
+        port=config['flask_port'],
+    )
     server.start()
 
     updater.bot.logger.setLevel(logging.CRITICAL)
